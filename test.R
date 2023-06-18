@@ -35,6 +35,6 @@ tableOne <- CreateTableOne(vars = colnames(select(empyrosis_t, -"呕吐（无0�
 print(
   tableOne,
   nonnormal = c("TBSA","烧伤指数"),exact = c("@90天死亡（成活0死亡1）"),
-  showAllLevels = TRUE)                           
+  showAllLevels = TRUE)     
 
 ffff
