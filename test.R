@@ -1,9 +1,11 @@
 library(readxl)
 library(tableone)
 library(dplyr)
+library(ggpubr)
+library(ComplexHeatmap)
+library(RColorBrewer)
 
-
-empyrosis_data1 <- read_excel("burn/empyrosis_data1.xlsx", 
+empyrosis_data1 <- read_excel("empyrosis_data1.xlsx", 
      col_types = c("text", "text", "numeric", 
          "numeric", "numeric", "text", "numeric", 
          "numeric", "numeric", "text", "numeric", 
@@ -28,13 +30,47 @@ empyrosis_t =  empyrosis_data1 %>% select(c("体重（kg","BMI","TBSA","烧伤�
 #tableOne <- CreateTableOne(data = empyrosis_t , strata = "呕吐（无0有1）", vars = vars, factorVars = factorVars, smd = TRUE)
 
 
-tableOne <- CreateTableOne(vars = colnames(select(empyrosis_t, -"呕吐（无0有1）")), 
-                           strata = c("呕吐（无0有1）"), 
-                           data = empyrosis_t)
+empyrosis_select = empyrosis_data1[,7:40] %>% select(-c("性别",matches("@1d")))
 
-print(
+tableOne <- CreateTableOne(vars = colnames(select(empyrosis_select, -c("呕吐（无0有1）","费用"))), 
+                           strata = c("呕吐（无0有1）"), 
+                           data = empyrosis_select)
+
+dt_f=empyrosis_select %>% select(c("呕吐（无0有1）","呕吐（无呕吐0，休克期1，非休克期2，两者都有3）","脓毒症（无0有1）","鼻饲（有1无0）","腹泻","CRRT","@90天死亡（成活0死亡1）"))
+colnames(dt_f)=c("呕吐","呕吐时期","脓毒症","鼻饲","腹泻","CRRT","死亡")
+
+
+outpdf=paste("res","_profile_new.pdf",sep='')
+pdf(outpdf, width = 16, height = 10)
+
+row_ha = rowAnnotation(df=as.data.frame(dt_f[,-1]),
+                       col=list(呕吐时期=c('0' = 'blue','1'='red','2'='yellow','3'='black'),
+                                脓毒症=c('1'='pink','0'='darkgreen'),
+                                鼻饲=c('1'='pink','0'='darkgreen'),
+                                腹泻=c('1'='pink','0'='darkgreen'),
+                                CRRT=c('1'='pink','0'='darkgreen'),
+                                死亡 =c('1'='pink','0'='darkgreen')                              
+                                # Onset_admission=circlize::colorRamp2(c(-1,0,1), c("blue", "white", "red"))
+                                )
+                        )
+
+h1 = ComplexHeatmap::Heatmap(na.omit(empyrosis_select[,1:3]),
+                        column_title = paste0("Key_Value","_Heatmap_by_Sepsis"),  
+                        right_annotation = row_ha, 
+                        left_annotation = rowAnnotation(df=as.data.frame(dt_f[,c('呕吐')]),col=list(呕吐=c('0' = 'blue','1'='red'))),
+                        row_split = dt_f$呕吐,
+                        col = rev(brewer.pal(10,"RdBu"))
+                        )
+
+
+tb1 = print(
   tableOne,
   nonnormal = c("TBSA","烧伤指数"),exact = c("@90天死亡（成活0死亡1）"),
   showAllLevels = TRUE)     
 
-ffff
+t.mem <- ggtexttable(tb1, theme = ttheme("light"))      
+
+pcom = ggarrange(t.mem, ncol = 1, nrow = 1,widths=c(1, 1))
+print(pcom)
+
+dev.off()
