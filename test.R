@@ -4,6 +4,7 @@ library(dplyr)
 library(ggpubr)
 library(ComplexHeatmap)
 library(RColorBrewer)
+#library(Cairo)
 
 empyrosis_data1 <- read_excel("empyrosis_data1.xlsx", 
      col_types = c("text", "text", "numeric", 
@@ -32,16 +33,8 @@ empyrosis_t =  empyrosis_data1 %>% select(c("体重（kg","BMI","TBSA","烧伤�
 
 empyrosis_select = empyrosis_data1[,7:40] %>% select(-c("性别",matches("@1d")))
 
-tableOne <- CreateTableOne(vars = colnames(select(empyrosis_select, -c("呕吐（无0有1）","费用"))), 
-                           strata = c("呕吐（无0有1）"), 
-                           data = empyrosis_select)
-
 dt_f=empyrosis_select %>% select(c("呕吐（无0有1）","呕吐（无呕吐0，休克期1，非休克期2，两者都有3）","脓毒症（无0有1）","鼻饲（有1无0）","腹泻","CRRT","@90天死亡（成活0死亡1）"))
 colnames(dt_f)=c("呕吐","呕吐时期","脓毒症","鼻饲","腹泻","CRRT","死亡")
-
-
-outpdf=paste("res","_profile_new.pdf",sep='')
-pdf(outpdf, width = 16, height = 10)
 
 row_ha = rowAnnotation(df=as.data.frame(dt_f[,-1]),
                        col=list(呕吐时期=c('0' = 'blue','1'='red','2'='yellow','3'='black'),
@@ -55,7 +48,7 @@ row_ha = rowAnnotation(df=as.data.frame(dt_f[,-1]),
                         )
 
 h1 = ComplexHeatmap::Heatmap(na.omit(empyrosis_select[,1:3]),
-                        column_title = paste0("Key_Value","_Heatmap_by_Sepsis"),  
+                        column_title = paste0("Key_Value","_Burning"),  
                         right_annotation = row_ha, 
                         left_annotation = rowAnnotation(df=as.data.frame(dt_f[,c('呕吐')]),col=list(呕吐=c('0' = 'blue','1'='red'))),
                         row_split = dt_f$呕吐,
@@ -63,13 +56,42 @@ h1 = ComplexHeatmap::Heatmap(na.omit(empyrosis_select[,1:3]),
                         )
 
 
+tableOne <- CreateTableOne(vars = colnames(select(empyrosis_select, -c("呕吐（无0有1）","费用","并发症"))), 
+                           strata = c("呕吐（无0有1）"), 
+                           data = empyrosis_select)
+
 tb1 = print(
   tableOne,
   nonnormal = c("TBSA","烧伤指数"),exact = c("@90天死亡（成活0死亡1）"),
   showAllLevels = TRUE)     
 
-t.mem <- ggtexttable(tb1, theme = ttheme("light"))      
+########index
+empyrosis_index = empyrosis_data1[,7:40] %>% select(c("呕吐（无0有1）",matches("@1d")))
+colnames(empyrosis_index)[1]="呕吐"
 
+h2= ComplexHeatmap::Heatmap(empyrosis_index[,-1],
+                        column_title = paste0("Key_Value","_Blood_index"),  
+                        left_annotation = rowAnnotation(df=as.data.frame(empyrosis_index[,c('呕吐')]),col=list(呕吐=c('0' = 'blue','1'='red'))),
+                        row_split = empyrosis_index$呕吐,
+                        col = rev(brewer.pal(10,"RdBu"))
+                        )
+
+tableOne <- CreateTableOne(vars = colnames(select(empyrosis_index, -c("呕吐"))), 
+                           strata = c("呕吐"), 
+                           data = empyrosis_index)
+
+tb2 = print(
+  tableOne,
+  nonnormal = c("TBSA","烧伤指数"),
+  showAllLevels = TRUE)   
+
+outpdf=paste("res","_profile_new.pdf",sep='')
+pdf(outpdf, width = 16, height = 10, family="GB1")
+
+print(h1)
+print(h2)
+
+t.mem <- ggtexttable(as.data.frame(tb1), theme = ttheme("light"))      
 pcom = ggarrange(t.mem, ncol = 1, nrow = 1,widths=c(1, 1))
 print(pcom)
 
