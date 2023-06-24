@@ -4,6 +4,7 @@ library(dplyr)
 library(ggpubr)
 library(ComplexHeatmap)
 library(RColorBrewer)
+library(gridGraphics)
 #library(Cairo)
 
 empyrosis_data1 <- read_excel("empyrosis_data1.xlsx", 
@@ -88,11 +89,27 @@ tb2 = print(
 outpdf=paste("res","_profile_new.pdf",sep='')
 pdf(outpdf, width = 16, height = 10, family="GB1")
 
-print(h1)
-print(h2)
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(nr = 1, nc = 2)))
+    pushViewport(viewport(layout.pos.row = 1, layout.pos.col = 1))
+      draw(h1,
+        heatmap_legend_side = 'bottom',
+        row_sub_title_side = 'left',
+        newpage = FALSE)
+      popViewport()
 
-t.mem <- ggtexttable(as.data.frame(tb1), theme = ttheme("light"))      
-pcom = ggarrange(t.mem, ncol = 1, nrow = 1,widths=c(1, 1))
+    pushViewport(viewport(layout.pos.row = 1, layout.pos.col = 2))
+      draw(h2,
+        heatmap_legend_side = 'bottom',
+        row_sub_title_side = 'right',
+        newpage = FALSE)
+      popViewport()
+popViewport(0)
+
+
+
+t1 <- ggtexttable(as.data.frame(tb1), theme = ttheme("light"))      
+tcom = ggarrange(t1,t2, ncol = 2, nrow = 1,widths=c(1, 1))
 print(pcom)
 
 dev.off()
