@@ -92,7 +92,7 @@ tb2 = print(
   nonnormal = c("TBSA","烧伤指数"),
   showAllLevels = TRUE)   
 
-
+##regression model
 
 biomarker="Key_Value"
 
