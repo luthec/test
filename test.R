@@ -11,6 +11,8 @@ library(lme4)
 library(broom)
 library(broom.mixed)
 library(gtools)
+library(cvms)
+library(pROC)
 #library(Cairo)
 
 empyrosis_data2 <- read_excel("empyrosis_data2.xlsx", 
