@@ -9,7 +9,7 @@ CHN_097_9732 <- read_csv("CHN-097_9732.csv")
 CHN_097_9728 <- read_csv("CHN-097_9728.csv")
 
 
-Sepsis_MDW_raw <- read_excel("Sepsis_MDW.xlsx", skip = 1)
+Sepsis_MDW_raw <- read_excel("SepsisMDW.xlsx", skip = 1)
 
 Sepsis_MDW1 = Sepsis_MDW_raw[!is.na(Sepsis_MDW_raw[,2]),1:2]
 colnames(Sepsis_MDW1)=c("Subject","MDW")
