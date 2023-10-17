@@ -25,12 +25,12 @@ sceList <- lapply(X = sceList, FUN = function(x) {
 normal.features <- SelectIntegrationFeatures(object.list = sceList[8:9])
 normal.anchors <- FindIntegrationAnchors(object.list = sceList[8:9], anchor.features = normal.features)
 normal.combined <- IntegrateData(anchorset = normal.anchors)
-DefaultAssay(normal.combined) <- "normal_integrated"
+#DefaultAssay(normal.combined) <- "normal_integrated"
 
 ccl.features <- SelectIntegrationFeatures(object.list = sceList[1:6])
 ccl.anchors <- FindIntegrationAnchors(object.list = sceList[1:6], anchor.features = ccl.features)
 ccl.combined <- IntegrateData(anchorset = ccl.anchors)
-DefaultAssay(ccl.combined) <- "ccl_integrated"
+#DefaultAssay(ccl.combined) <- "ccl_integrated"
 
 
 #######UMAP
@@ -58,7 +58,8 @@ p4 <- DimPlot(ccl.combined, reduction = "umap", label = TRUE, repel = TRUE)
 
 p1 + p2 + p3 + p4
 
-
+library(celldex)
+library(SingleR)
 
 
 
