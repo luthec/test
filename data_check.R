@@ -3,7 +3,7 @@ library(xlsx)
 library(readxl)
 
 
-dt = read_excel(dir()[1],sheet = 2,col_names = T)
+dt = read_excel(dir()[2],sheet = 2,col_names = T)
 
 
 
@@ -21,3 +21,15 @@ sapply(dt$`年龄（岁）`, is.numeric)
 
 dtt = dt %>% filter(!grepl("^\\d+", `NT-proBNP 检测结果（ng/L）`))
 table(dtt$`NT-proBNP 检测结果（ng/L）`)
+
+############
+dt = read_excel(dir()[1],sheet = 2,col_names = T,skip=4)[-1,]
+
+table(dt$性别)
+
+sapply(dt$`年龄
+（岁）`, is.numeric)
+
+range(as.numeric(dt$对比试剂),na.rm =T)
+
+range(as.numeric(dt$考核试剂),na.rm =T)

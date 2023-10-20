@@ -4,6 +4,9 @@ library(zCompositions)
 library(ComplexHeatmap)
 library(RColorBrewer)
 
+lod_imput <- function(mat) ( low_dl <- c(0.1,15,0.2,0.2,0.1,2,1,9,5,35,30,3.16,2,67)
+multRepl(mat,label=NA,dl=low_dl)
+
 
 Progestrone_RW <- read_excel("Progestrone_RW.xlsx")
 
@@ -25,14 +28,27 @@ dt_f_multRepl_z <-  dt_f_multRepl %>% mutate_all(funs(z_score = z_scores(.))) %>
 
 
 h1 = ComplexHeatmap::Heatmap(dt_f_z,
-                        column_title = paste0("Progestrone_","Raw_Value"),  
+                        column_title = paste0("Progestrone_female_all","Raw_Value"),  
                         col = rev(brewer.pal(10,"RdBu"))
                         )
 
 h2 = ComplexHeatmap::Heatmap(dt_f_multRepl_z,
-                        column_title = paste0("Progestrone_","Inputation_Value"),  
+                        column_title = paste0("Progestrone_female_all","Inputation_Value"),  
                         col = rev(brewer.pal(10,"RdBu"))
                         )
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 outpdf=paste("res","_profile.pdf",sep='')
