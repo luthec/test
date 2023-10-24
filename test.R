@@ -8,12 +8,13 @@ library(gridGraphics)
 library(tidyverse)
 library(lmerTest)
 library(lme4)
+library(parameters)
 library(broom)
 library(broom.mixed)
 library(gtools)
 library(pROC)
 library(ggplot2)
-library(cvms)
+#library(cvms)
 #library(performance)
 #library(Cairo)
 
@@ -121,10 +122,13 @@ dt_train = dt_na_removed[index,]
 dt_test = dt_na_removed[-index,]
 
 fit.glm = glm(耐受 ~ 年龄+性别+BMI+TBSA+烧伤指数+III度+脓毒症+`@1d_TBIL`+`@1d_DBIL`+`@1d_BUN`+`@1d_LAC`+`@1d_CRE`+`@1d_hct`+`@1d_ALB`+`@1dHB`+`@1d_淋巴细胞`+`@1d_plt`+`@1d_PA`+`@1d_TP`, family = binomial,data=dt_train) 
-fit.glm.index = fit.glm %>%
-    tidy(conf.int = TRUE) %>% 
-    select(c("term","estimate","std.error","conf.low","conf.high","p.value")) %>% 
-    mutate(signif = stars.pval(p.value))   
+
+# fit.glm.step <- step(fit.glm)
+fit.glm.index =  fit.glm %>% select_parameters() %>% 
+    model_parameters() %>% 
+    mutate(signif = stars.pval(p))   
+
+
    
 main.title <- paste0(biomarker,"_GLM")
 subtitle <- paste0("Generalized Linear Model") %>%
@@ -179,6 +183,8 @@ dt_test = dt_na_removed[-index,]
 
 
 fit.mem <- glmer(耐受 ~ (1 | 原因) +(1 | 入院时间) +(1 | 启动时间) +年龄+性别+BMI+TBSA+烧伤指数+III度+脓毒症+`@1d_TBIL`+`@1d_DBIL`+`@1d_BUN`+`@1d_LAC`+`@1d_CRE`+`@1d_hct`+`@1d_ALB`+`@1dHB`+`@1d_淋巴细胞`+`@1d_plt`+`@1d_PA`+`@1d_TP`, data = dt_train, family = binomial, control = glmerControl(optimizer = "bobyqa")) 
+fit.mem2 <- glmer(耐受 ~ (1 | 原因) +(1 | 入院时间) +(1 | 启动时间) +年龄+性别+BMI+TBSA+烧伤指数+III度+脓毒症+`@1d_TBIL`, data = dt_train, family = binomial,control = glmerControl(optimizer = "bobyqa")) %>%
+  select_parameters()
 
 fit.mem.index = fit.mem %>%
     tidy(conf.int = TRUE) %>% 
