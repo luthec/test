@@ -111,12 +111,6 @@ colnames(dt_select)[c(1,20:26)]=c("耐受","呕吐","呕吐时期","脓毒症","
 
 dt_na_removed <- na.omit(dt_select)
 
-#fit.glm = glm(耐受 ~ 年龄+BMI+TBSA+烧伤指数+III度+呕吐+呕吐时期+脓毒症+鼻饲+腹泻+CRRT+死亡+`@1d_TBIL`+`@1d_DBIL`+`@1d_BUN`+`@1d_LAC`+`@1d_CRE`+`@1d_hct`+`@1d_ALB`+`@1dHB`+`@1d_淋巴细胞`+`@1d_plt`+`@1d_PA`+`@1d_TP`, family = binomial,data=dt_na_removed) %>%
-#    tidy(conf.int = TRUE) %>% 
-#    select(c("term","estimate","std.error","conf.low","conf.high","p.value")) %>% 
-#    mutate(signif = stars.pval(p.value))
-
-
 index <- sample(nrow(dt_na_removed),nrow(dt_na_removed)*0.80)
 dt_train = dt_na_removed[index,]
 dt_test = dt_na_removed[-index,]
@@ -171,11 +165,6 @@ colnames(dt_select2)[c(1:4,23:29)]=c("原因","入院时间","启动时间","耐
 
 dt_na_removed <- na.omit(dt_select2)
 
-#fit.glm = glm(耐受 ~ 年龄+BMI+TBSA+烧伤指数+III度+呕吐+呕吐时期+脓毒症+鼻饲+腹泻+CRRT+死亡+`@1d_TBIL`+`@1d_DBIL`+`@1d_BUN`+`@1d_LAC`+`@1d_CRE`+`@1d_hct`+`@1d_ALB`+`@1dHB`+`@1d_淋巴细胞`+`@1d_plt`+`@1d_PA`+`@1d_TP`, family = binomial,data=dt_na_removed) %>%
-#    tidy(conf.int = TRUE) %>% 
-#    select(c("term","estimate","std.error","conf.low","conf.high","p.value")) %>% 
-#    mutate(signif = stars.pval(p.value))
-
 
 index <- sample(nrow(dt_na_removed),nrow(dt_na_removed)*0.80)
 dt_train = dt_na_removed[index,]
@@ -183,13 +172,21 @@ dt_test = dt_na_removed[-index,]
 
 
 fit.mem <- glmer(耐受 ~ (1 | 原因) +(1 | 入院时间) +(1 | 启动时间) +年龄+性别+BMI+TBSA+烧伤指数+III度+脓毒症+`@1d_TBIL`+`@1d_DBIL`+`@1d_BUN`+`@1d_LAC`+`@1d_CRE`+`@1d_hct`+`@1d_ALB`+`@1dHB`+`@1d_淋巴细胞`+`@1d_plt`+`@1d_PA`+`@1d_TP`, data = dt_train, family = binomial, control = glmerControl(optimizer = "bobyqa")) 
-fit.mem2 <- glmer(耐受 ~ (1 | 原因) +(1 | 入院时间) +(1 | 启动时间) +年龄+性别+BMI+TBSA+烧伤指数+III度+脓毒症+`@1d_TBIL`, data = dt_train, family = binomial,control = glmerControl(optimizer = "bobyqa")) %>%
+fit.mem2 <- glmer(耐受 ~ (1 | 原因) +(1 | 入院时间) +(1 | 启动时间) +年龄+性别+BMI+TBSA+烧伤指数+III度+脓毒症+`@1d_TBIL`, data = dt_train, family = binomial) %>%
   select_parameters()
 
-fit.mem.index = fit.mem %>%
-    tidy(conf.int = TRUE) %>% 
-    select(c("term","estimate","std.error","conf.low","conf.high","p.value")) %>% 
-    mutate(signif = stars.pval(p.value))  
+
+fit.mem3 <- glmer(耐受 ~ (1 | 原因) +(1 | 入院时间) +(1 | 启动时间) +年龄+性别+BMI+TBSA+烧伤指数+III度+脓毒症+`@1d_TBIL`+`@1d_DBIL`+`@1d_BUN`+`@1d_LAC`+`@1d_CRE`+`@1d_hct`+`@1d_ALB`+`@1dHB`+`@1d_淋巴细胞`+`@1d_plt`+`@1d_PA`+`@1d_TP`, data = dt_train, family = binomial)
+
+
+
+
+
+
+fit.mem2 %>%  
+    model_parameters() %>% 
+    mutate(signif = stars.pval(p))
+
 
 main.title <- paste0(biomarker,"_GMM")
 subtitle <- paste0("Generalized linear mixed model") %>%
