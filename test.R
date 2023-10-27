@@ -14,9 +14,45 @@ library(broom.mixed)
 library(gtools)
 library(pROC)
 library(ggplot2)
+library(report)
 #library(cvms)
 #library(performance)
 #library(Cairo)
+
+rm(list = ls())
+
+model_index <- function(model,marker_name,model_name){
+    index =  model  %>% 
+    model_parameters() %>% 
+    mutate(signif = stars.pval(p))   
+
+    main.title <- paste0(marker_name)
+    subtitle <- paste0(model_name) %>%
+    strwrap(width = 80) %>%
+    paste(collapse = "\n")
+    ggtexttable(index, theme = ttheme("light")) %>%
+    tab_add_title(text = subtitle, face = "plain", size = 10) %>%
+    tab_add_title(text = main.title, face = "bold", padding = unit(0.1, "line")) %>%
+    tab_add_footnote(text = "* means significant levels", size = 10, face = "italic")
+
+}
+
+
+ROC_curve <- function(model,data_mat,y,model_name,test=NA){
+  if (is.na(test)){
+    probs_glmmod <- predict(model, type = 'response')
+    roc_glmmod  <- roc(response = y, predictor = probs_glmmod)
+  }else {
+    probs_glmmod <- predict(model, newdata = data_mat, type="response",allow.new.levels = TRUE)
+    roc_glmmod  <- roc(response = y, predictor = probs_glmmod)
+  }
+
+    ggroc(roc_glmmod, legacy.axes = TRUE) +
+    labs(x = '假阳性率', y = '真阳性率',
+    title = paste0('ROC curve\n Y~',model_name)) +
+    annotate('text', x = .5, y = .5, label = paste0('AUC: ', round(auc(roc_glmmod), digits = 2)))
+}
+
 
 empyrosis_data2 <- read_excel("empyrosis_data2.xlsx", 
     col_types = c("text", "text", "text", 
@@ -117,38 +153,16 @@ dt_test = dt_na_removed[-index,]
 
 fit.glm = glm(耐受 ~ 年龄+性别+BMI+TBSA+烧伤指数+III度+脓毒症+`@1d_TBIL`+`@1d_DBIL`+`@1d_BUN`+`@1d_LAC`+`@1d_CRE`+`@1d_hct`+`@1d_ALB`+`@1dHB`+`@1d_淋巴细胞`+`@1d_plt`+`@1d_PA`+`@1d_TP`, family = binomial,data=dt_train) 
 
-# fit.glm.step <- step(fit.glm)
-fit.glm.index =  fit.glm %>% select_parameters() %>% 
-    model_parameters() %>% 
-    mutate(signif = stars.pval(p))   
+fit.glm.select =  fit.glm %>% select_parameters()
 
+t.glm <- model_index(fit.glm,biomarker,"Generalized Linear Model")
 
-   
-main.title <- paste0(biomarker,"_GLM")
-subtitle <- paste0("Generalized Linear Model") %>%
-  strwrap(width = 80) %>%
-  paste(collapse = "\n")
-t.glm <- ggtexttable(fit.glm.index, theme = ttheme("light")) %>%
-  tab_add_title(text = subtitle, face = "plain", size = 10) %>%
-  tab_add_title(text = main.title, face = "bold", padding = unit(0.1, "line")) %>%
-  tab_add_footnote(text = "* means significant levels", size = 10, face = "italic")
+t.glm.select <- model_index(fit.glm.select ,biomarker,"Generalized Linear Model with Select")
 
 # ROC curve for first model
-probs_glmmod <- predict(fit.glm, type = 'response')
-roc_glmmod  <- roc(response = dt_train$耐受, predictor = probs_glmmod)
-glmmod_plot <- ggroc(roc_glmmod, legacy.axes = TRUE) +
-  labs(x = '假阳性率', y = '真阳性率',
-       title = 'ROC curve\n耐受 ~ 未筛选因子') +
-  annotate('text', x = .5, y = .5, label = paste0('AUC: ', round(auc(roc_glmmod), digits = 2)))
 
-
-probs_glmmod_test<- predict(fit.glm, newdata = dt_test, type="response")
-roc_glmmod_test  <- roc(response = dt_test$耐受, predictor = probs_glmmod_test)
-glmmod_plot_test <- ggroc(roc_glmmod_test, legacy.axes = TRUE) +
-  labs(x = '假阳性率', y = '真阳性率',
-       title = 'ROC curve\n耐受 ~ 未筛选因子') +
-  annotate('text', x = .5, y = .5, label = paste0('AUC: ', round(auc(roc_glmmod_test), digits = 2)))
-
+glmmod_plot <- ROC_curve(fit.glm,dt_train,dt_train$耐受,'未筛选因子') 
+glmmod_plot_test <- ROC_curve(fit.glm,dt_test,dt_test$耐受,'未筛选因子',test='T') 
 
 ######
 
@@ -176,42 +190,14 @@ fit.mem2 <- glmer(耐受 ~ (1 | 原因) +(1 | 入院时间) +(1 | 启动时间) 
   select_parameters()
 
 
-fit.mem3 <- glmer(耐受 ~ (1 | 原因) +(1 | 入院时间) +(1 | 启动时间) +年龄+性别+BMI+TBSA+烧伤指数+III度+脓毒症+`@1d_TBIL`+`@1d_DBIL`+`@1d_BUN`+`@1d_LAC`+`@1d_CRE`+`@1d_hct`+`@1d_ALB`+`@1dHB`+`@1d_淋巴细胞`+`@1d_plt`+`@1d_PA`+`@1d_TP`, data = dt_train, family = binomial)
 
-
-
-
-
-
-fit.mem2 %>%  
-    model_parameters() %>% 
-    mutate(signif = stars.pval(p))
-
-
-main.title <- paste0(biomarker,"_GMM")
-subtitle <- paste0("Generalized linear mixed model") %>%
-  strwrap(width = 80) %>%
-  paste(collapse = "\n")
-t.mem <- ggtexttable(fit.mem.index, theme = ttheme("light")) %>%
-  tab_add_title(text = subtitle, face = "plain", size = 10) %>%
-  tab_add_title(text = main.title, face = "bold", padding = unit(0.1, "line")) %>%
-  tab_add_footnote(text = "* means significant levels", size = 10, face = "italic")
+t.mem <- model_index(fit.mem,biomarker,"Generalized Linear Model")
 
 # ROC curve for second model
-probs_memmod <- predict(fit.mem, type = 'response')
-roc_memmod  <- roc(response = dt_train$耐受, predictor = probs_memmod)
-memmod_plot <- ggroc(roc_memmod, legacy.axes = TRUE) +
-  labs(x = '假阳性率', y = '真阳性率',
-       title = 'ROC curve\n耐受 ~ 筛选因子') +
-  annotate('text', x = .5, y = .5, label = paste0('AUC: ', round(auc(roc_memmod), digits = 2)))
 
+memmod_plot <- ROC_curve(fit.mem,dt_train,dt_train$耐受,'去除随机效应') 
+memmod_plot_test <- ROC_curve(fit.mem,dt_test,dt_test$耐受,'去除随机效应',test='T') 
 
-probs_memmod_test<- predict(fit.mem, newdata = dt_test, type="response",allow.new.levels = TRUE)
-roc_memmod_test  <- roc(response = dt_test$耐受, predictor = probs_memmod_test)
-memmod_plot_test <- ggroc(roc_memmod_test, legacy.axes = TRUE) +
-  labs(x = '假阳性率', y = '真阳性率',
-       title = 'ROC curve\n耐受 ~ 筛选因子') +
-  annotate('text', x = .5, y = .5, label = paste0('AUC: ', round(auc(roc_memmod_test), digits = 2)))
 
 
 outpdf=paste("res","_profile_new.pdf",sep='')
