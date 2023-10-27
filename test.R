@@ -22,14 +22,18 @@ library(report)
 rm(list = ls())
 
 model_index <- function(model,marker_name,model_name){
-    index =  model  %>% 
-    model_parameters() %>% 
-    mutate(signif = stars.pval(p))   
+    #index =  model  %>% 
+    #model_parameters() %>% 
+    #mutate(signif = stars.pval(p))   
+
+    index =  model  %>%
+    tidy(conf.int = TRUE) %>% 
+    select(c("term","estimate","std.error","conf.low","conf.high","p.value")) %>% 
+    mutate(signif = stars.pval(p.value))
+    
 
     main.title <- paste0(marker_name)
-    subtitle <- paste0(model_name) %>%
-    strwrap(width = 80) %>%
-    paste(collapse = "\n")
+    subtitle <- paste0(model_name) %>% strwrap(width = 80) %>% paste(collapse = "\n")
     ggtexttable(index, theme = ttheme("light")) %>%
     tab_add_title(text = subtitle, face = "plain", size = 10) %>%
     tab_add_title(text = main.title, face = "bold", padding = unit(0.1, "line")) %>%
@@ -157,12 +161,15 @@ fit.glm.select =  fit.glm %>% select_parameters()
 
 t.glm <- model_index(fit.glm,biomarker,"Generalized Linear Model")
 
-t.glm.select <- model_index(fit.glm.select ,biomarker,"Generalized Linear Model with Select")
+t.glm.select <- model_index(fit.glm.select ,biomarker,"Generalized Linear Model with Select variable")
 
 # ROC curve for first model
 
-glmmod_plot <- ROC_curve(fit.glm,dt_train,dt_train$耐受,'未筛选因子') 
-glmmod_plot_test <- ROC_curve(fit.glm,dt_test,dt_test$耐受,'未筛选因子',test='T') 
+glmmod_plot <- ROC_curve(fit.glm,dt_train,dt_train$耐受,'广义线性模型_未筛选因子_训练集') 
+glmmod_plot_test <- ROC_curve(fit.glm,dt_test,dt_test$耐受,'广义线性模型_未筛选因子_测试集',test='T') 
+
+glm.select.mod_plot <- ROC_curve(fit.glm.select,dt_train,dt_train$耐受,'广义线性模型_筛选因子_训练集') 
+glm.select.mod_plot_test <- ROC_curve(fit.glm.select,dt_test,dt_test$耐受,'广义线性模型_筛选因子_测试集',test='T') 
 
 ######
 
@@ -186,19 +193,20 @@ dt_test = dt_na_removed[-index,]
 
 
 fit.mem <- glmer(耐受 ~ (1 | 原因) +(1 | 入院时间) +(1 | 启动时间) +年龄+性别+BMI+TBSA+烧伤指数+III度+脓毒症+`@1d_TBIL`+`@1d_DBIL`+`@1d_BUN`+`@1d_LAC`+`@1d_CRE`+`@1d_hct`+`@1d_ALB`+`@1dHB`+`@1d_淋巴细胞`+`@1d_plt`+`@1d_PA`+`@1d_TP`, data = dt_train, family = binomial, control = glmerControl(optimizer = "bobyqa")) 
-fit.mem2 <- glmer(耐受 ~ (1 | 原因) +(1 | 入院时间) +(1 | 启动时间) +年龄+性别+BMI+TBSA+烧伤指数+III度+脓毒症+`@1d_TBIL`, data = dt_train, family = binomial) %>%
+fit.mem.select <- glmer(耐受 ~ (1 | 原因) +(1 | 入院时间) +(1 | 启动时间) +年龄+性别+BMI+TBSA+烧伤指数+III度+脓毒症+`@1d_TBIL`+`@1d_DBIL`+`@1d_BUN`+`@1d_LAC`+`@1d_CRE`+`@1d_hct`, data = dt_train, family = binomial) %>%
   select_parameters()
 
+t.mem <- model_index(fit.mem,biomarker,"Mix Model random effects removed")
 
-
-t.mem <- model_index(fit.mem,biomarker,"Generalized Linear Model")
+t.mem.select <- model_index(fit.mem.select ,biomarker,"Mix Model with Select variable")
 
 # ROC curve for second model
 
-memmod_plot <- ROC_curve(fit.mem,dt_train,dt_train$耐受,'去除随机效应') 
-memmod_plot_test <- ROC_curve(fit.mem,dt_test,dt_test$耐受,'去除随机效应',test='T') 
+memmod_plot <- ROC_curve(fit.mem,dt_train,dt_train$耐受,'混合模型去除随机效应_未筛选因子_训练集') 
+memmod_plot_test <- ROC_curve(fit.mem,dt_test,dt_test$耐受,'混合模型去除随机效应_未筛选因子_测试集',test='T') 
 
-
+mem.select.mod_plot <- ROC_curve(fit.mem.select ,dt_train,dt_train$耐受,'混合模型去除随机效应_筛选因子_训练集') 
+mem.select.mod_plot_test <- ROC_curve(fit.mem.select ,dt_test,dt_test$耐受,'混合模型去除随机效应_筛选因子_测试集',test='T') 
 
 outpdf=paste("res","_profile_new.pdf",sep='')
 pdf(outpdf, width = 16, height = 10, family="GB1")
@@ -227,11 +235,22 @@ t2 <- ggtexttable(as.data.frame(tb2), theme = ttheme("light"))
 tcom = ggarrange(t1,t2, ncol = 2, nrow = 1,widths=c(1, 1))
 print(tcom)
 
-pcom = ggarrange(t.glm,t.mem, ncol = 2, nrow = 1,widths=c(1, 1))
-print(pcom)
+pcom.glm = ggarrange(t.glm,t.glm.select , ncol = 2, nrow = 1,widths=c(1, 1))
+print(pcom.glm)
+
+ggpubr::ggarrange(glmmod_plot, glm.select.mod_plot, nrow = 1)
+
+
+pcom.mem = ggarrange(t.mem,t.mem.select , ncol = 2, nrow = 1,widths=c(1, 1))
+print(pcom.mem)
+
+ggpubr::ggarrange(memmod_plot, mem.select.mod_plot, nrow = 1)
 
 ggpubr::ggarrange(glmmod_plot, memmod_plot, nrow = 1)
-
 ggpubr::ggarrange(glmmod_plot_test, memmod_plot_test, nrow = 1)
+
+ggpubr::ggarrange(glm.select.mod_plot, mem.select.mod_plot, nrow = 1)
+ggpubr::ggarrange(glm.select.mod_plot_test, mem.select.mod_plot_test, nrow = 1)
+
 
 dev.off()
