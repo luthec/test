@@ -11,7 +11,7 @@ sceList = lapply(folders,function(folder){
 
 for(i in 1:length(folders)){
   sceList[[i]][["percent.mt"]] <- PercentageFeatureSet(sceList[[i]], pattern = "^MT-")
-  sceList[[i]] <- subset(sceList[[i]],subset=nFeature_RNA>20 & nFeature_RNA <2500 & percent.mt<10)
+  sceList[[i]] <- subset(sceList[[i]],subset=nFeature_RNA>200 & percent.mt<20)
 }
 
 names(sceList)  = folders
@@ -29,8 +29,14 @@ ccl$label <- "CCL"
 ccl <- NormalizeData(ccl, verbose = FALSE)
 ccl <- FindVariableFeatures(ccl, selection.method = "vst", nfeatures = 2000)
 
+#jsh3
+jsh <- sceList[[7]]
+jsh$label <- "JSH"
+jsh<- NormalizeData(jsh, verbose = FALSE)
+jsh <- FindVariableFeatures(jsh, selection.method = "vst", nfeatures = 2000)
+
 ###normalize, integration and filter
-ccl.anchors <- FindIntegrationAnchors(object.list = list(nc, ccl), dims = 1:20)
+ccl.anchors <- FindIntegrationAnchors(object.list = list(nc, ccl, jsh), dims = 1:20)
 ccl.combined <- IntegrateData(anchorset = ccl.anchors, dims = 1:20)
 DefaultAssay(ccl.combined) <- "integrated"
 
@@ -47,7 +53,10 @@ p2 <- DimPlot(ccl.combined, reduction = "umap", label = TRUE, repel = TRUE)
 
 p1 + p2 
 
-DimPlot(ccl.combined, reduction = "umap", split.by = "label")
+p3 <- DimPlot(ccl.combined, reduction = "umap", split.by = "label")
+p4 <- FeaturePlot(ccl.combined, features = c("CD8A", "IL7R", "CCR7", "S100A4", "GNLY", "NKG7", "FCGR3A", "MS4A7", "CD14"), min.cutoff = "q9")
+
+
 
 #### Identify conserved cell type markers
 
