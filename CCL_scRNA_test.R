@@ -1,6 +1,8 @@
 library(dplyr)
 library(Seurat)
 library(metap)
+library(ggrepel)
+library(ggpubr)
 
 folders=list.files('./')
 folders
@@ -11,7 +13,6 @@ sceList = lapply(folders,function(folder){
 
 for(i in 1:length(folders)){
   sceList[[i]][["percent.mt"]] <- PercentageFeatureSet(sceList[[i]], pattern = "^MT-")
-  sceList[[i]] <- subset(sceList[[i]],subset=nFeature_RNA>200 & percent.mt<20)
 }
 
 names(sceList)  = folders
@@ -51,10 +52,45 @@ ccl.combined <- FindClusters(ccl.combined, resolution = 0.5)
 p1 <- DimPlot(ccl.combined, reduction = "umap", group.by = "orig.ident")
 p2 <- DimPlot(ccl.combined, reduction = "umap", label = TRUE, repel = TRUE)
 
-p1 + p2 
-
 p3 <- DimPlot(ccl.combined, reduction = "umap", split.by = "label")
 p4 <- FeaturePlot(ccl.combined, features = c("CD8A", "IL7R", "CCR7", "S100A4", "GNLY", "NKG7", "FCGR3A", "MS4A7", "CD14"), min.cutoff = "q9")
+
+VlnPlot(ccl.combined, features = c("CD8A"))
+
+VlnPlot(ccl.combined, features = c("IL7R"))
+
+
+plots <- VlnPlot(ccl.combined, features = c("IL7R", "CCR7", "S100A4"), split.by = "label", slot = "counts",
+    pt.size = 0, combine = FALSE)
+CombinePlots(plots = plots, ncol = 1)
+
+
+outpdf=paste("UMAP","_all.pdf",sep='')
+pdf(outpdf, width = 16, height = 10)
+
+#print(ggarrange(p1,p2, ncol = 2, nrow = 1,widths=c(1, 1)))
+print(p1+p2)
+print(p3)
+print(p4)
+
+
+dev.off()
+
+#### Identify   cell type  
+
+ccl.aggregated <- sumCountsAcrossCells(ccl.combined,  BPPARAM=bpp)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
