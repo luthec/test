@@ -4,6 +4,7 @@ library(metap)
 library(ggrepel)
 library(ggpubr)
 
+set.seed(0)
 rm(list = ls())
 gc()
 
@@ -41,19 +42,19 @@ sceList = lapply(folders,function(folder){
 names(sceList)  = folders
 
 ####pre-QC
-ccl.test <- merge(x = sceList[[1]], y = sceList[2:9], add.cell.ids = names(sceList), project = "CCL")
+cll.test <- merge(x = sceList[[1]], y = sceList[2:9], add.cell.ids = names(sceList), project = "CLL")
 
-p0s<- VlnPlot(ccl.test , features = c("CD4", "CD8A"), slot = "counts",combine = FALSE)
+p0s<- VlnPlot(cll.test , features = c("CD4", "CD8A"), slot = "counts",combine = FALSE)
 CombinePlots(plots = p0s, ncol = 1)    
 
 nc <- merge(x = sceList[[8]], y = sceList[[9]], add.cell.ids = names(sceList)[8:9] , project = "NC") %>% SCTransform(verbose = FALSE)
 nc$label <- "NC"
-ccl <- merge(x = sceList[[2]], y = sceList[3:6], add.cell.ids = names(sceList)[2:6] , project = "CCL") %>% SCTransform(verbose = FALSE)
-ccl$label <- "CCL"
+cll <- merge(x = sceList[[2]], y = sceList[3:6], add.cell.ids = names(sceList)[2:6] , project = "CLL") %>% SCTransform(verbose = FALSE)
+cll$label <- "CLL"
 jsh <- sceList[[7]] %>% SCTransform(verbose = FALSE)
 jsh$label <- "JSH"
 
-sample_list=c(nc,ccl,jsh)
+sample_list=c(nc,cll,jsh)
 #features <- SelectIntegrationFeatures(object.list = sample_list, nfeatures = 2000)
 #datasets <- PrepSCTIntegration(object.list = sample_list, anchor.features = features, verbose = TRUE)
 #datasets <- lapply(X = datasets, FUN = RunPCA, verbose = FALSE, features = features)
@@ -100,7 +101,28 @@ p4 <- FeaturePlot(objs, features = c("CD8A","CD8B","CD4","CD3D","CD3E","CD3G"), 
 plots0 <- VlnPlot(objs, features = c("CD4", "CD8A","CD8B"), split.by = "label", slot = "counts", assay = "RNA",pt.size = 0, combine = FALSE)
 p5 = DotPlot(objs, features = rev(all_markers.to.plot), cols = c("blue", "red"), dot.scale = 8, ) + RotatedAxis()
 
+###target genes check
+#BCL2 family
+# avg.cd8t.cells.10$gene[grep(genes.to.label[2],avg.cd8t.cells.10$gene)]
+# c("BCL2L15","BCL2L11","BCL2L14","BCL2L2","BCL2L2-PABPN1","BCL2L10" ,"BCL2A1","BCL2","BCL2L1","BCL2L12","BCL2L13")   
 
+
+
+cd8t.cells.10 <- subset(objs, idents = "10",subset =CD8A > 0 | CD8B > 0)
+cd8t.cells.10 <- RenameIdents(cd8t.cells.10,  `10` = "CD8 T")
+
+markers.to.plot <- c("CD3D","CD3E","CD3G", "CD8A","CD8B", "ITGA4","BCL2","BCL2A1")
+DotPlot(cd8t.cells.10, features = rev(markers.to.plot),  dot.scale = 8, cols = c("blue", "red","green"), split.by = "label") + RotatedAxis()
+
+#####average expression
+aggregate_cd8t.cells.10 <- AggregateExpression(cd8t.cells.10, group.by = "label", return.seurat = TRUE)
+genes.to.label = c("ITGA4","BCL2","BCL2A1")
+
+p001 <- CellScatter(aggregate_cd8t.cells.10, "CLL", "NC", highlight = genes.to.label) + ggtitle("CD8+ T Cells")
+p001 <- LabelPoints(plot = p001, points = genes.to.label, repel = TRUE)
+
+plots1 = VlnPlot(cd8t.cells.10, features = genes.to.label, split.by = "label", slot = "counts", assay = "RNA",pt.size = 0, combine = FALSE)
+CombinePlots(plots = plots1, ncol = 1)
 
 
 # Create Seurat Object of T-Cell Clusters
