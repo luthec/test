@@ -3,6 +3,7 @@ library(Seurat)
 library(metap)
 library(ggrepel)
 library(ggpubr)
+library(MAST)
 
 set.seed(0)
 rm(list = ls())
@@ -23,12 +24,9 @@ objs <- FindNeighbors(objs, reduction = "pca",dims = 1:n_dim)
 FindClusters(objs, resolution = 0.5, algorithm = 2)
 }
 
-
-all_markers.to.plot <- c("CD4","CD8A","CD8B","CD3D", "CREM", "HSPH1", "SELL", "GIMAP5", "CACYBP", "GNLY", "NKG7", "CCL5", 
-     "MS4A1", "CD79A", "MIR155HG", "NME1", "FCGR3A", "VMO1", "CCL2", "S100A9", "HLA-DQA1", 
-    "GPR183", "PPBP", "GNG11", "HBA2", "HBB", "TSPAN13", "IL3RA", "IGJ")
-
-tcell_markers.to.plot <- c("CD4","CD8A", "CD8B",'CD40LG',"CCR7", "IL7R", "SELL", "DTHD1", "LYST", "LEF1", "CCR4", "GZMH")
+tcell.markers <- c("CD3D","CD3E","CD3G", "CD4","CD8A","CD8B")
+genes.to.label = c("ITGA4","BCL2","BCL2A1")
+markers.to.plot <- c(tcell.markers, genes.to.label)
 
 folders=list.files('./')
 folders
@@ -44,7 +42,7 @@ names(sceList)  = folders
 ####pre-QC
 cll.test <- merge(x = sceList[[1]], y = sceList[2:9], add.cell.ids = names(sceList), project = "CLL")
 
-p0s<- VlnPlot(cll.test , features = c("CD4", "CD8A"), slot = "counts",combine = FALSE)
+p0s<- VlnPlot(cll.test , features = tcell.markers, slot = "counts",combine = FALSE)
 CombinePlots(plots = p0s, ncol = 1)    
 
 nc <- merge(x = sceList[[8]], y = sceList[[9]], add.cell.ids = names(sceList)[8:9] , project = "NC") %>% SCTransform(verbose = FALSE)
@@ -70,6 +68,16 @@ objs <- SCT_intergration(sample_list,30)
 
 DefaultAssay(objs) <- 'SCT'
 
+objs <- PrepSCTFindMarkers(objs)
+objs.markers <- FindAllMarkers(objs, only.pos = TRUE)
+
+objs.markers %>%
+    group_by(cluster) %>%
+    dplyr::filter(avg_log2FC > 1) %>%
+    slice_head(n = 10) %>%
+    ungroup() -> top10
+pm0 <- DoHeatmap(objs, features = top10$gene) + NoLegend()
+
 p1 <- DimPlot(objs, reduction = "umap", group.by = "orig.ident")
 p2 <- DimPlot(objs, reduction = "umap", label = TRUE, repel = TRUE)
 p3 <- DimPlot(objs, reduction = "umap", split.by = "label")
@@ -89,7 +97,7 @@ pred.scRNA <- SingleR(test = objs@assays$integrated@data,
 
 p33 = plotScoreHeatmap(pred.scRNA, clusters=pred.scRNA@rownames, fontsize.row = 9,show_colnames = T)
 
-pred.scRNA %>% filter(labels=="T cell")
+# pred.scRNA %>% filter(labels=="T_cells")
 
 # T-Cell Markers
 signature <- readxl::read_excel('C:\\Users\\tliu05\\Desktop\\2023projects\\01_DS\\jiangsu\\Cell_marker_Human.xlsx')
@@ -97,10 +105,13 @@ sig_gene  <- signature %>% as.data.frame() %>% filter(`Tissue type`=="Peripheral
 sig_gene %>% filter(V1=="CD8 T cell" | V1=="CD4 T cell" | V1=="T cell")
 sig_gene %>% filter(grepl("T cell",V1))
 
-p4 <- FeaturePlot(objs, features = c("CD8A","CD8B","CD4","CD3D","CD3E","CD3G"),  label = TRUE)
-plots0 <- VlnPlot(objs, features = c("CD4", "CD8A","CD8B"), split.by = "label", slot = "counts", assay = "RNA",pt.size = 0, combine = FALSE)
-p5 = DotPlot(objs, features = rev(all_markers.to.plot), cols = c("blue", "red"), dot.scale = 8, ) + RotatedAxis()
+p4 <- FeaturePlot(objs, features = tcell.markers,  label = TRUE)
+plots0 <- VlnPlot(objs, features = markers.to.plot, split.by = "label", slot = "counts", assay = "RNA",pt.size = 0, combine = FALSE)
+p5 = DotPlot(objs, features = rev(markers.to.plot), cols = c("blue", "red"), dot.scale = 8, assay = "RNA" ) + RotatedAxis()
 
+p7 <-ggplot(p5$data, aes(x=id, y=pct.exp, fill=id)) + geom_col() + facet_wrap(~features.plot)
+
+p6 <- FeaturePlot(objs, features = genes.to.label,  label = TRUE)
 ###target genes check
 #BCL2 family
 # avg.cd8t.cells.10$gene[grep(genes.to.label[2],avg.cd8t.cells.10$gene)]
@@ -108,22 +119,40 @@ p5 = DotPlot(objs, features = rev(all_markers.to.plot), cols = c("blue", "red"),
 
 
 
+
+
+####CD8 cell screening
 cd8t.cells.10 <- subset(objs, idents = "10",subset =CD8A > 0 | CD8B > 0)
 cd8t.cells.10 <- RenameIdents(cd8t.cells.10,  `10` = "CD8 T")
 
-markers.to.plot <- c("CD3D","CD3E","CD3G", "CD8A","CD8B", "ITGA4","BCL2","BCL2A1")
-DotPlot(cd8t.cells.10, features = rev(markers.to.plot),  dot.scale = 8, cols = c("blue", "red","green"), split.by = "label") + RotatedAxis()
+cd8t.markers <- FindConservedMarkers(objs, assay = "SCT", ident.1 = "10", grouping.var = "label",verbose = FALSE)
+cd8t.markers %>% slice_head(n = 10) %>% ungroup() -> top10
+pm1 <- DoHeatmap(cd8t.cells.10, features = row.names(top10)) + NoLegend()
+
+pt01 <- DotPlot(cd8t.cells.10, features = rev(markers.to.plot),  dot.scale = 8, cols = c("blue", "red","green"), split.by = "label") + RotatedAxis()
+
+pt03 <-ggplot(pt01$data, aes(x=id, y=pct.exp, fill=id)) + geom_col() + facet_wrap(~features.plot)
 
 #####average expression
 aggregate_cd8t.cells.10 <- AggregateExpression(cd8t.cells.10, group.by = "label", return.seurat = TRUE)
-genes.to.label = c("ITGA4","BCL2","BCL2A1")
 
-p001 <- CellScatter(aggregate_cd8t.cells.10, "CLL", "NC", highlight = genes.to.label) + ggtitle("CD8+ T Cells")
-p001 <- LabelPoints(plot = p001, points = genes.to.label, repel = TRUE)
+pt02 <- CellScatter(aggregate_cd8t.cells.10, "CLL", "NC", highlight = genes.to.label) + ggtitle("CD8+ T Cells")
+pt02 <- LabelPoints(plot = pt02, points = genes.to.label, repel = TRUE)
 
 plots1 = VlnPlot(cd8t.cells.10, features = genes.to.label, split.by = "label", slot = "counts", assay = "RNA",pt.size = 0, combine = FALSE)
 CombinePlots(plots = plots1, ncol = 1)
 
+####DE for specific T cell
+poscells <- WhichCells(cd8t.cells.10, expression = ITGA4 > 0)
+cd8t.cells.10$TAR_exp<- paste0("CD8+T_Cell_ITGA4",ifelse(colnames(cd8t.cells.10) %in% poscells, "+", "-"))
+table(cd8t.cells.10$TAR_exp)
+
+Idents(cd8t.cells.10) <- "TAR_exp"
+cd8t.cells.10 <- PrepSCTFindMarkers(cd8t.cells.10)
+tar.de <- FindMarkers(cd8t.cells.10, ident.1 = "CD8+T_Cell_ITGA4+", ident.2 = "CD8+T_Cell_ITGA4-", verbose = FALSE)
+head(tar.de, n = 10)
+
+head(FindMarkers(cd8t.cells.10, ident.1 = "CD8+T_Cell_ITGA4+", ident.2 = "CD8+T_Cell_ITGA4-", test.use = "MAST"))
 
 # Create Seurat Object of T-Cell Clusters
 DefaultAssay(objs) <- "RNA"
@@ -137,12 +166,17 @@ tcell_combined2 <-SCT_intergration(tcell_list2)
 pt1 <- DimPlot(tcell_combined2, group.by = "orig.ident")
 pt2 <- DimPlot(tcell_combined2, label = TRUE, repel = TRUE)
 pt3 <- DimPlot(tcell_combined2, label=TRUE, reduction = "umap", split.by = "label")
-pt4 <- DoHeatmap(tcell_combined2, features = tcell_markers.to.plot , assay = "RNA", slot = "data", angle = 90) + scale_fill_gradientn(colors = c("white", "red"))
-plotst <- VlnPlot(tcell_combined2, features = c("CD4", "CD8A","CD8B"), split.by = "label", slot = "counts", assay = "RNA",pt.size = 0, combine = FALSE)
-pt5 = DotPlot(tcell_combined2, features = rev(all_markers.to.plot), cols = c("blue", "red"), dot.scale = 8, ) + RotatedAxis()
+pt6 <- FeaturePlot(tcell_combined2, features = genes.to.label,  label = TRUE)
 
 
-outpdf=paste("UMAP","_all.pdf",sep='')
+
+pt4 <- DoHeatmap(tcell_combined2, features =markers.to.plot , assay = "RNA", slot = "data", angle = 90) + scale_fill_gradientn(colors = c("white", "red"))
+plotst <- VlnPlot(tcell_combined2, features = markers.to.plot, split.by = "label", slot = "counts", assay = "RNA",pt.size = 0, combine = FALSE)
+pt5 = DotPlot(tcell_combined2, features =  markers.to.plot, cols = c("blue", "red"), dot.scale = 8,assay = "RNA" ) + RotatedAxis()
+pt7 <-ggplot(pt5$data, aes(x=id, y=pct.exp, fill=id)) + geom_col() + facet_wrap(~features.plot)
+
+
+outpdf=paste("CLL","_all.pdf",sep='')
 pdf(outpdf, width = 16, height = 10)
 
 #print(ggarrange(p1,p2, ncol = 2, nrow = 1,widths=c(1, 1)))
@@ -150,15 +184,28 @@ print(p1+p2)
 grid::grid.newpage()
 print(p33)
 print(p4)
-CombinePlots(plots = plots0, ncol = 1)
+CombinePlots(plots = plots0[1:6], ncol = 1)
+CombinePlots(plots = plots0[7:9], ncol = 1)
 print(p3)
 print(p5)
+print(p7)
+print(p6)
+print(pm0)
+
+print(pm1)
+print(pt01)
+print(pt03)
+print(pt02)
+CombinePlots(plots = plots1, ncol = 1)
 
 print(pt1+pt2)
 print(pt4)
-CombinePlots(plots = plotst, ncol = 1)
+CombinePlots(plots = plotst[1:6], ncol = 1)
+CombinePlots(plots = plotst[7:9], ncol = 1)
 print(pt3)
 print(pt5)
+print(pt6)
+print(pt7)
 dev.off()
 
 
