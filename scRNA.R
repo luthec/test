@@ -32,18 +32,19 @@ poscells <- spe.obj[, which(x = expr >= 1)] %>% colnames()
 
 spe.obj$TAR_exp<- paste0(spe.obj$label,"_",tar.cells,"_",tar.gene,ifelse(colnames(spe.obj) %in% poscells, "+", "-"))
 print(table(spe.obj$TAR_exp))
-
+spe.obj<- PrepSCTFindMarkers(spe.obj)
+Idents(spe.obj) <- "TAR_exp"
 subset(spe.obj,features=setdiff(rownames(spe.obj),tar.gene ))
 }
 
 DE_GSEA<- function(spe.obj,group){
-Idents(spe.obj) <- group
-# spe.obj <- PrepSCTFindMarkers(spe.obj)
 objs.markers <- FindAllMarkers(spe.obj, only.pos = TRUE,assay="SCT",recorrect_umi = FALSE)
 objs.markers %>%
+    group_by(cluster) %>%
+    # dplyr::filter(avg_log2FC > 1) %>%
     slice_head(n = 10) %>%
     ungroup() -> top10
-pm <- DoHeatmap(spe.obj, features = row.names(top10) ) + NoLegend()
+pm <- DoHeatmap(spe.obj, features = top10$gene ) + NoLegend()
 
 ###GSEA
 objs.final <- irGSEA.score(object =spe.obj, assay = "RNA", 
@@ -64,7 +65,6 @@ result.dge <- irGSEA.integrate(object = objs.final,
                                           "ssgsea", "JASMINE", "viper"))
 
 return(list(objs.markers,pm,objs.final,result.dge))
-
 }
 
 ###############main
@@ -188,45 +188,33 @@ CombinePlots(plots = plots1, ncol = 1)
 
 #####specific label DE and GSEA
 cd8t.cells.spe <- Specific_OBJ(cd8t.cells.10,'ITGA4')
+GO_HALLMARK <- "HALLMARK-INFLAMMATORY-RESPONSE"
 
 cd8t.cells.jsh <- subset(x = cd8t.cells.spe, idents = c("CLL_CD8+T_Cell_ITGA4+","NC_CD8+T_Cell_ITGA4+"), invert = TRUE)
-de.results=list()
-de.results=DE_GSEA(cd8t.cells.jsh,"TAR_exp")
+jsh.results=list()
+jsh.results=DE_GSEA(cd8t.cells.jsh,"TAR_exp")
+
+pjsh.de <- jsh.results[[2]]
+pjsh.heatmap.plot <-irGSEA.heatmap(object = jsh.results[[4]], method = "RRA", top = 50, show.geneset = NULL)
+pjsh.ridgeplot <- irGSEA.ridgeplot(object = jsh.results[[3]], method = "UCell", show.geneset = GO_HALLMARK)
+pjsh.scatterplot <- irGSEA.density.scatterplot(object = jsh.results[[3]], method = "UCell", show.geneset = GO_HALLMARK, reduction = "umap")
+
 
 cd8t.cells.cll <- subset(x = cd8t.cells.spe, idents = c("JSH_CD8+T_Cell_ITGA4+","NC_CD8+T_Cell_ITGA4+"), invert = TRUE)
+cll.results=list()
+cll.results=DE_GSEA(cd8t.cells.cll,"TAR_exp")
+
+pcll.de <- cll.results[[2]]
+pcll.heatmap.plot <-irGSEA.heatmap(object = cll.results[[4]], method = "RRA", top = 50, show.geneset = NULL)
+pcll.ridgeplot <- irGSEA.ridgeplot(object = cll.results[[3]], method = "UCell", show.geneset = GO_HALLMARK)
+pcll.scatterplot <- irGSEA.density.scatterplot(object = cll.results[[3]], method = "UCell", show.geneset = GO_HALLMARK, reduction = "umap")
 
 
-tar.upde <- FindAllMarkers(object = cd8t.cells.10, 
-                          only.pos = TRUE,
-                          logfc.threshold = 0.25) 
+tar.de <- FindMarkers(cd8t.cells.spe, ident.1 = c("CLL_CD8+T_Cell_ITGA4+","JSH_CD8+T_Cell_ITGA4+"), ident.2 = c("CLL_CD8+T_Cell_ITGA4-","JSH_CD8+T_Cell_ITGA4-"), test.use = "MAST")
+pde1 <- DoHeatmap(cd8t.cells.spe, features = row.names(tar.de) ) + NoLegend()
 
-tar.de <- FindMarkers(cd8t.cells.10, ident.1 = c("CLL_CD8+T_Cell_ITGA4+","JSH_CD8+T_Cell_ITGA4+"), ident.2 = c("CLL_CD8+T_Cell_ITGA4-","JSH_CD8+T_Cell_ITGA4-"), verbose = FALSE)
-
-head(FindMarkers(cd8t.cells.10, ident.1 = c("CLL_CD8+T_Cell_ITGA4+","JSH_CD8+T_Cell_ITGA4+"), ident.2 = c("CLL_CD8+T_Cell_ITGA4-","JSH_CD8+T_Cell_ITGA4-"), test.use = "MAST"))
-
-
-###########GSEA plot
-
-irGSEA.heatmap.plot <- irGSEA.heatmap(object = result.dge, 
-                                      method = "RRA",
-                                      top = 50, 
-                                      show.geneset = NULL)
-irGSEA.heatmap.plot
-
-
-
-
-
-halfvlnplot <- irGSEA.halfvlnplot(object = cd8t.cells.10.final,
-                                  method = "UCell",
-                                  show.geneset = "HALLMARK-INFLAMMATORY-RESPONSE")
-halfvlnplot
-
-vlnplot <- irGSEA.vlnplot(object = cd8t.cells.10.final,
-                          method = c("AUCell", "UCell", "singscore", "ssgsea", 
-                                     "JASMINE", "viper"),
-                          show.geneset = "HALLMARK-INFLAMMATORY-RESPONSE")
-vlnplot
+tar.de2 <- FindMarkers(cd8t.cells.spe, ident.1 = c("CLL_CD8+T_Cell_ITGA4+"), ident.2 = c("CLL_CD8+T_Cell_ITGA4-"),test.use = "MAST", verbose = FALSE)
+pde2 <- DoHeatmap(cd8t.cells.spe, features = row.names(tar.de2)[1:10], slot = "counts", assay = "RNA") + NoLegend()
 
 # Create Seurat Object of T-Cell Clusters
 DefaultAssay(objs) <- "RNA"
@@ -250,7 +238,7 @@ pt5 = DotPlot(tcell_combined2, features =  markers.to.plot, cols = c("blue", "re
 pt7 <-ggplot(pt5$data, aes(x=id, y=pct.exp, fill=id)) + geom_col() + facet_wrap(~features.plot)
 
 
-outpdf=paste("CLL","_all.pdf",sep='')
+outpdf=paste("CLL","_alln.pdf",sep='')
 pdf(outpdf, width = 16, height = 10)
 
 #print(ggarrange(p1,p2, ncol = 2, nrow = 1,widths=c(1, 1)))
@@ -271,6 +259,18 @@ print(pt01)
 print(pt03)
 print(pt02)
 CombinePlots(plots = plots1, ncol = 1)
+
+print(pjsh.de)
+print(pjsh.heatmap.plot)
+print(pjsh.ridgeplot)
+print(pjsh.scatterplot)
+print(pcll.de)
+print(pcll.heatmap.plot)
+print(pcll.ridgeplot)
+print(pcll.scatterplot)
+print(pde1)
+print(pde2)
+
 
 print(pt1+pt2)
 print(pt4)
