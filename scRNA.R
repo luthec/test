@@ -4,6 +4,7 @@ library(metap)
 library(ggrepel)
 library(ggpubr)
 library(MAST)
+library(irGSEA)
 
 set.seed(0)
 rm(list = ls())
@@ -24,6 +25,49 @@ objs <- FindNeighbors(objs, reduction = "pca",dims = 1:n_dim)
 FindClusters(objs, resolution = 0.5, algorithm = 2)
 }
 
+Specific_OBJ <- function(spe.obj,tar.gene,tar.cells='CD8+T_Cell') {
+#poscells <- WhichCells(cd8t.cells.10, expression = ITGA4 > 0)
+expr <- FetchData(object = spe.obj, vars = tar.gene ,slot = "counts", assay = "RNA")
+poscells <- spe.obj[, which(x = expr >= 1)] %>% colnames()
+
+spe.obj$TAR_exp<- paste0(spe.obj$label,"_",tar.cells,"_",tar.gene,ifelse(colnames(spe.obj) %in% poscells, "+", "-"))
+print(table(spe.obj$TAR_exp))
+
+subset(spe.obj,features=setdiff(rownames(spe.obj),tar.gene ))
+}
+
+DE_GSEA<- function(spe.obj,group){
+Idents(spe.obj) <- group
+# spe.obj <- PrepSCTFindMarkers(spe.obj)
+objs.markers <- FindAllMarkers(spe.obj, only.pos = TRUE,assay="SCT",recorrect_umi = FALSE)
+objs.markers %>%
+    slice_head(n = 10) %>%
+    ungroup() -> top10
+pm <- DoHeatmap(spe.obj, features = row.names(top10) ) + NoLegend()
+
+###GSEA
+objs.final <- irGSEA.score(object =spe.obj, assay = "RNA", 
+                             slot = "data", seeds = 123, ncores = 1,
+                             min.cells = 3, min.feature = 0,
+                             custom = F, geneset = NULL, msigdb = T, 
+                             species = "Homo sapiens", category = "H",  
+                             subcategory = NULL, geneid = "symbol",
+                             method = c("AUCell", "UCell", "singscore", 
+                                        "ssgsea", "JASMINE", "viper"),
+                             aucell.MaxRank = NULL, ucell.MaxRank = NULL, 
+                             kcdf = 'Gaussian')
+
+result.dge <- irGSEA.integrate(object = objs.final, 
+                               group.by = group,
+                               metadata = NULL, col.name = NULL,
+                               method = c("AUCell","UCell","singscore",
+                                          "ssgsea", "JASMINE", "viper"))
+
+return(list(objs.markers,pm,objs.final,result.dge))
+
+}
+
+###############main
 tcell.markers <- c("CD3D","CD3E","CD3G", "CD4","CD8A","CD8B")
 genes.to.label = c("ITGA4","BCL2","BCL2A1")
 markers.to.plot <- c(tcell.markers, genes.to.label)
@@ -124,7 +168,6 @@ p6 <- FeaturePlot(objs, features = genes.to.label,  label = TRUE)
 ####CD8 cell screening
 cd8t.cells.10 <- subset(objs, idents = "10",subset =CD8A > 0 | CD8B > 0)
 cd8t.cells.10 <- RenameIdents(cd8t.cells.10,  `10` = "CD8 T")
-cd8t.cells.10 <- PrepSCTFindMarkers(cd8t.cells.10)
 
 cd8t.markers <- FindConservedMarkers(objs, assay = "SCT", ident.1 = "10", grouping.var = "label",verbose = FALSE)
 cd8t.markers %>% slice_head(n = 10) %>% ungroup() -> top10
@@ -143,12 +186,15 @@ pt02 <- LabelPoints(plot = pt02, points = genes.to.label, repel = TRUE)
 plots1 = VlnPlot(cd8t.cells.10, features = genes.to.label, split.by = "label", slot = "counts", assay = "RNA",pt.size = 0, combine = FALSE)
 CombinePlots(plots = plots1, ncol = 1)
 
-####DE for specific T cell
-poscells <- WhichCells(cd8t.cells.10, expression = ITGA4 > 0)
-cd8t.cells.10$TAR_exp<- paste0(cd8t.cells.10$label,"_CD8+T_Cell_ITGA4",ifelse(colnames(cd8t.cells.10) %in% poscells, "+", "-"))
-table(cd8t.cells.10$TAR_exp)
+#####specific label DE and GSEA
+cd8t.cells.spe <- Specific_OBJ(cd8t.cells.10,'ITGA4')
 
-Idents(cd8t.cells.10) <- "TAR_exp"
+cd8t.cells.jsh <- subset(x = cd8t.cells.spe, idents = c("CLL_CD8+T_Cell_ITGA4+","NC_CD8+T_Cell_ITGA4+"), invert = TRUE)
+de.results=list()
+de.results=DE_GSEA(cd8t.cells.jsh,"TAR_exp")
+
+cd8t.cells.cll <- subset(x = cd8t.cells.spe, idents = c("JSH_CD8+T_Cell_ITGA4+","NC_CD8+T_Cell_ITGA4+"), invert = TRUE)
+
 
 tar.upde <- FindAllMarkers(object = cd8t.cells.10, 
                           only.pos = TRUE,
@@ -158,26 +204,8 @@ tar.de <- FindMarkers(cd8t.cells.10, ident.1 = c("CLL_CD8+T_Cell_ITGA4+","JSH_CD
 
 head(FindMarkers(cd8t.cells.10, ident.1 = c("CLL_CD8+T_Cell_ITGA4+","JSH_CD8+T_Cell_ITGA4+"), ident.2 = c("CLL_CD8+T_Cell_ITGA4-","JSH_CD8+T_Cell_ITGA4-"), test.use = "MAST"))
 
-###GSEA
 
-library(irGSEA)
-
-cd8t.cells.10.final <- irGSEA.score(object =cd8t.cells.10, assay = "RNA", 
-                             slot = "data", seeds = 123, ncores = 1,
-                             min.cells = 3, min.feature = 0,
-                             custom = F, geneset = NULL, msigdb = T, 
-                             species = "Homo sapiens", category = "H",  
-                             subcategory = NULL, geneid = "symbol",
-                             method = c("AUCell", "UCell", "singscore", 
-                                        "ssgsea", "JASMINE", "viper"),
-                             aucell.MaxRank = NULL, ucell.MaxRank = NULL, 
-                             kcdf = 'Gaussian')
-
-result.dge <- irGSEA.integrate(object = cd8t.cells.10.final, 
-                               group.by = "TAR_exp",
-                               metadata = NULL, col.name = NULL,
-                               method = c("AUCell","UCell","singscore",
-                                          "ssgsea", "JASMINE", "viper"))
+###########GSEA plot
 
 irGSEA.heatmap.plot <- irGSEA.heatmap(object = result.dge, 
                                       method = "RRA",
@@ -188,10 +216,17 @@ irGSEA.heatmap.plot
 
 
 
+
 halfvlnplot <- irGSEA.halfvlnplot(object = cd8t.cells.10.final,
                                   method = "UCell",
                                   show.geneset = "HALLMARK-INFLAMMATORY-RESPONSE")
 halfvlnplot
+
+vlnplot <- irGSEA.vlnplot(object = cd8t.cells.10.final,
+                          method = c("AUCell", "UCell", "singscore", "ssgsea", 
+                                     "JASMINE", "viper"),
+                          show.geneset = "HALLMARK-INFLAMMATORY-RESPONSE")
+vlnplot
 
 # Create Seurat Object of T-Cell Clusters
 DefaultAssay(objs) <- "RNA"
