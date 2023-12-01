@@ -167,6 +167,10 @@ p6 <- FeaturePlot(objs, features = genes.to.label,  label = TRUE)
 
 ####CD8 cell screening
 cd8t.cells.10 <- subset(objs, idents = "10",subset =CD8A > 0 | CD8B > 0)
+
+
+#####re-integration?
+
 cd8t.cells.10 <- RenameIdents(cd8t.cells.10,  `10` = "CD8 T")
 
 cd8t.markers <- FindConservedMarkers(objs, assay = "SCT", ident.1 = "10", grouping.var = "label",verbose = FALSE)
@@ -218,6 +222,8 @@ pde2 <- DoHeatmap(cd8t.cells.spe, features = row.names(tar.de2)[1:10], slot = "c
 
 # Create Seurat Object of T-Cell Clusters
 DefaultAssay(objs) <- "RNA"
+##DefaultAssay(objs) <- "SCT" ?
+
 Tcells <- subset(x = objs, subset =CD3D > 0 | CD3E > 0 | CD3G > 0)
 #Tcells = subset(objs, cells = WhichCells(objs, idents= c("0", "5", "2", "11", "13", "6")) )
 tcell_list2 <- SplitObject(Tcells, split.by = "label")
