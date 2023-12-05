@@ -339,9 +339,12 @@ DefaultAssay(bcell_combined2) <- "SCT"
 pb6 <- FeaturePlot(bcell_combined2, features = c("CD5","CD19"),  label = TRUE)
 
 bcell.cll.de = DE_cluster(bcell_combined2,"JSH")
-purrr::map(bcell.cll.de, possibly( ~ dplyr::filter(., gene %in% c("CD5","CD19"))))
+purrr::map(bcell.cll.de, possibly( ~ dplyr::filter(., gene %in% c("ITGA4","CD5","CD19"))))
 
-vbde <- vp_case1(bcell_combined2,"5",c("ITGA4",tcell.markers,tcell.classification.markers) )
+bcell.jsh.de = DE_cluster(bcell_combined2,"CLL")
+purrr::map(bcell.jsh.de, possibly( ~ dplyr::filter(., gene %in% c("ITGA4","CD5","CD19"))))
+
+vbde <- vp_case1(bcell_combined2,"5",c("CD5","MS4A1","CD79A","CD19") )
 
 
 outpdf=paste("CLL","_alln.pdf",sep='')
@@ -397,9 +400,7 @@ CombinePlots(plots = plotst1[7:11], ncol = 1)
 print(pb1+pb2)
 print(pb3)
 print(pb6)
-
 print(vbde)
-
 
 dev.off()
 
