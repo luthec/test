@@ -32,8 +32,26 @@ obj <- subset(x = obj, idents = remove_idents, invert = TRUE)
 splitlist<-SplitObject(obj, split.by = "seurat_clusters")
 de.clusters <- lapply(X = splitlist, FUN = function(x){
 # x <- PrepSCTFindMarkers(x)
-FindAllMarkers(x,only.pos = TRUE, assay="SCT" ,recorrect_umi = FALSE) 
+FindAllMarkers(x,only.pos = TRUE, assay="SCT" ,test.use = "MAST",recorrect_umi = FALSE) 
 })
+}
+
+vp_case1 <- function(seurat.obj, ident_number, gene_signature, test_sign =list( c("CLL", "NC"), c("JSH", "NC"), c("JSH", "CLL")) ){
+  plot_case1 <- function(signature, y_max = NULL){
+    VlnPlot(seurat.obj, features = signature,idents =ident_number,slot = "counts", assay = "RNA",
+            pt.size = 0.5, 
+            group.by = "label", 
+            y.max = y_max
+    ) + stat_compare_means(comparisons = test_sign, label = "p.signif")
+  }
+  plot_list <- list()
+  y_max_list <- list()
+  for (gene in gene_signature) {
+    plot_list[[gene]] <- plot_case1(gene)
+    y_max_list[[gene]] <- max(plot_list[[gene]]$data[[gene]])
+    plot_list[[gene]] <- plot_case1(gene, y_max = (y_max_list[[gene]] + 1) )
+  }
+  cowplot::plot_grid(plotlist = plot_list)
 }
 
 Specific_OBJ <- function(spe.obj,tar.gene,tar.cells='CD8+T_Cell') {
@@ -49,7 +67,7 @@ subset(spe.obj,features=setdiff(rownames(spe.obj),tar.gene ))
 }
 
 DE_GSEA<- function(spe.obj,group){
-objs.markers <- FindAllMarkers(spe.obj, only.pos = TRUE,assay="SCT",recorrect_umi = FALSE)
+objs.markers <- FindAllMarkers(spe.obj, only.pos = TRUE,assay="SCT",test.use = "MAST",recorrect_umi = FALSE)
 objs.markers %>%
     group_by(cluster) %>%
     # dplyr::filter(avg_log2FC > 1) %>%
@@ -80,8 +98,9 @@ return(list(objs.markers,pm,objs.final,result.dge))
 
 ###############main
 tcell.markers <- c("CD3D","CD3E","CD3G", "CD4","CD8A","CD8B")
-genes.to.label = c("ITGA4","BCL2","BCL2A1")
+genes.to.label <- c("ITGA4","BCL2","BCL2A1")
 markers.to.plot <- c(tcell.markers, genes.to.label)
+tcell.classification.markers = c ("CCR7", "LEF1", "GZMA", "GZMK", "PRF1")
 
 folders=list.files('./')
 folders
@@ -125,6 +144,16 @@ DefaultAssay(objs) <- 'SCT'
 
 objs <- PrepSCTFindMarkers(objs)
 objs.markers <- FindAllMarkers(objs, only.pos = TRUE)
+
+objs.cll.de = DE_cluster(objs,"JSH")
+objs.jsh.de = DE_cluster(objs,"CLL")
+
+purrr::map(objs.cll.de, possibly( ~ dplyr::filter(., gene %in% c("BCL2","ITGA4"))))
+purrr::map(objs.jsh.de, possibly( ~ dplyr::filter(., gene %in% c("BCL2","ITGA4"))))
+
+for (i in c("12","1","5","0","3","9")){
+  assign(paste0("vde", i), vp_case1(objs,i,c("ITGA4",tcell.markers,tcell.classification.markers) ))
+}
 
 objs.markers %>%
     group_by(cluster) %>%
@@ -233,6 +262,7 @@ tar.de3 <- FindMarkers(cd8t.cells.spe, ident.1 = c("JSH_CD8+T_Cell_ITGA4+"), ide
 pde3 <- DoHeatmap(cd8t.cells.spe, features = row.names(tar.de3)[1:10], slot = "counts", assay = "RNA")
 
 # Create Seurat Object of T-Cell Clusters
+
 DefaultAssay(objs) <- "SCT"
 
 Tcells <- subset(x = objs, subset =CD3D > 0 | CD3E > 0 | CD3G > 0)
@@ -254,56 +284,65 @@ pt0 <- DoHeatmap(tcell_combined2 , features = top10$gene)
 pt1 <- DimPlot(tcell_combined2, group.by = "orig.ident")
 pt2 <- DimPlot(tcell_combined2, label = TRUE, repel = TRUE)
 pt3 <- DimPlot(tcell_combined2, label=TRUE, reduction = "umap", split.by = "label")
+
+
 pt6 <- FeaturePlot(tcell_combined2, features = genes.to.label,  label = TRUE)
-
-
-
 pt4 <- DoHeatmap(tcell_combined2, features =markers.to.plot , assay = "RNA", slot = "data", angle = 90) + scale_fill_gradientn(colors = c("white", "red"))
 plotst <- VlnPlot(tcell_combined2, features = markers.to.plot, split.by = "label", slot = "counts", assay = "RNA",pt.size = 0, combine = FALSE)
 
 
 tcell.cll.de = DE_cluster(tcell_combined2,"JSH")
+purrr::map(tcell.cll.de, possibly( ~ dplyr::filter(., gene %in% c("BCL2","ITGA4"))))
 tcell.jsh.de = DE_cluster(tcell_combined2,"CLL")
+purrr::map(tcell.jsh.de, possibly( ~ dplyr::filter(., gene %in% c("BCL2","ITGA4"))))
 ##map error
 # test.de %>% imap(~ .x %>% filter(gene %in% c("BCL2","CDH23")))
 # Map(function(x, y) subset(x, gene %in% c("BCL2","CDH23")),test.de, names(test.de))
 # lapply(X = test.de, FUN = function(x){x %>% filter(gene %in% c("BCL2","CDH23"))})
 
-for(i in names(tcell.cll.de)){
-  print(i)
-  try(print(tcell.cll.de[[i]] %>% filter(gene %in% c("BCL2","ITGA4"))))
-}
-
-for(i in names(tcell.jsh.de)){
-  print(i)
-  try(print(tcell.jsh.de[[i]] %>% filter(gene %in% c("BCL2","ITGA4"))))
-}
-
-VlnPlot(tcell_combined2,idents = c("5","12"), features = "ITGA4",split.by = "label", pt.size = 0) +
-  NoLegend() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-     stat_compare_means(comparisons = list( c("CLL", "NC"), c("JSH", "NC"), c("JSH", "CLL")), label = "p.signif")
-   # geom_signif(comparisons =  list( c("CLL", "NC"), c("JSH", "NC"), c("JSH", "CLL")),
-              map_signif_level = function(p) sprintf("*p = %.2g", p),
-              step_increase = 0.15)
-
-VlnPlot(tcell_combined2,idents = c("1","2"), features = "BCL2",split.by = "label", pt.size = 0) +
-  NoLegend() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-     stat_compare_means(comparisons = list( c("CLL", "NC"), c("JSH", "NC"), c("JSH", "CLL")), label = "p.signif")
-   # geom_signif(comparisons =  list( c("CLL", "NC"), c("JSH", "NC"), c("JSH", "CLL")),
-              map_signif_level = function(p) sprintf("*p = %.2g", p),
-              step_increase = 0.15)
+vtde5 <- vp_case1(tcell_combined2,"5",c("ITGA4",tcell.markers,tcell.classification.markers) )
 
 
 pt5 = DotPlot(tcell_combined2, features =  markers.to.plot, cols = c("blue", "red"), dot.scale = 8,assay = "RNA" ) + RotatedAxis()
 pt7 <-ggplot(pt5$data, aes(x=id, y=pct.exp, fill=id)) + geom_col() + facet_wrap(~features.plot)
 
-tcell.classification.markers = c ("CCR7", "LEF1", "GZMA", "GZMK", "PRF1")
 plot.markers = c(tcell.markers,tcell.classification.markers)
 
 pt8 = DotPlot(tcell_combined2, features =  plot.markers, cols = c("blue", "red"), dot.scale = 8,assay = "RNA" ) + RotatedAxis()
 plotst1 <- VlnPlot(tcell_combined2, features = plot.markers, split.by = "label", slot = "counts", assay = "RNA",pt.size = 0, combine = FALSE)
+
+
+##########B cells
+DefaultAssay(objs) <- "SCT"
+
+Bcells <- subset(x = objs, subset =MS4A1 > 0 | CD79A > 0 | CD19 > 0)
+
+bcell_list2 <- SplitObject(Bcells, split.by = "label")
+bcell_list2 <- lapply(bcell_list2, SCTransform, vars.to.regress = "percent.mt")
+
+bcell_combined2 <-SCT_intergration(bcell_list2)
+
+bcell.comarkers <- FindAllMarkers(bcell_combined2 , only.pos = TRUE)
+
+bcell.comarkers %>%
+    group_by(cluster) %>%
+    dplyr::filter(avg_log2FC > 1) %>%
+    slice_head(n = 10) %>%
+    ungroup() -> top10
+pb0 <- DoHeatmap(bcell_combined2 , features = top10$gene) 
+
+pb1 <- DimPlot(bcell_combined2, group.by = "orig.ident")
+pb2 <- DimPlot(bcell_combined2, label = TRUE, repel = TRUE)
+pb3 <- DimPlot(bcell_combined2, label=TRUE, reduction = "umap", split.by = "label")
+
+DefaultAssay(bcell_combined2) <- "SCT"
+pb6 <- FeaturePlot(bcell_combined2, features = c("CD5","CD19"),  label = TRUE)
+
+bcell.cll.de = DE_cluster(bcell_combined2,"JSH")
+purrr::map(bcell.cll.de, possibly( ~ dplyr::filter(., gene %in% c("CD5","CD19"))))
+
+vbde <- vp_case1(bcell_combined2,"5",c("ITGA4",tcell.markers,tcell.classification.markers) )
+
 
 outpdf=paste("CLL","_alln.pdf",sep='')
 pdf(outpdf, width = 16, height = 10)
@@ -320,6 +359,7 @@ print(p5)
 print(p7)
 print(p6)
 print(pm0)
+print(vde1)
 
 print(pm1)
 print(pt01)
@@ -348,11 +388,19 @@ print(pt3)
 print(pt5)
 print(pt6)
 print(pt7)
-
+print(vtde5)
 print(pt0)
 print(pt8)
 CombinePlots(plots = plotst1[1:6], ncol = 1)
 CombinePlots(plots = plotst1[7:11], ncol = 1)
+
+print(pb1+pb2)
+print(pb3)
+print(pb6)
+
+print(vbde)
+
+
 dev.off()
 
 
