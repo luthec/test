@@ -58,20 +58,6 @@ ROC_curve <- function(model,data_mat,y,model_name,test=NA){
 }
 
 
-empyrosis_data2 <- read_excel("empyrosis_data2.xlsx", 
-    col_types = c("text", "text", "text", 
-         "numeric", "numeric", "numeric", 
-         "text", "numeric", "numeric", "numeric", 
-         "text", "numeric", "numeric", "numeric", 
-         "numeric", "text", "numeric", 
-         "numeric", "numeric", "numeric", 
-         "numeric", "numeric", "numeric", 
-         "numeric", "numeric", "numeric", 
-         "numeric", "numeric", "text", "text", 
-         "text", "text", "text", "text", "text", 
-         "numeric", "text", "numeric", "numeric", 
-        "text", "text", "numeric", "numeric", 
-         "text"))
 
 ## List numerically coded categorical variables
 #factorVars <- c("@90天死亡（成活0死亡1）","呕吐（无0有1）")
@@ -80,12 +66,29 @@ empyrosis_data2 <- read_excel("empyrosis_data2.xlsx",
 
 #tableOne <- CreateTableOne(data = empyrosis_t , strata = "呕吐（无0有1）", vars = vars, factorVars = factorVars, smd = TRUE)
 
-empyrosis = empyrosis_data2[,6:43]
+test_datasets <- read_excel("burn/test_datasets.xlsx", 
+    col_types = c("numeric", "text", "text", 
+        "numeric", "numeric", "numeric", 
+        "text", "numeric", "numeric", "numeric", 
+        "text", "text", "numeric", "text", 
+        "numeric", "text", "numeric", "numeric", 
+        "numeric", "numeric", "numeric", 
+        "numeric", "numeric", "numeric", 
+        "numeric", "numeric", "numeric", 
+        "numeric", "numeric", "text", "numeric", 
+        "text", "text", "text", "text", "text", 
+        "numeric", "text", "numeric", "numeric", 
+        "text", "text", "numeric", "numeric", 
+        "numeric", "text", "text", "text", 
+        "numeric", "text", "text", "text"))
 
-empyrosis_select = empyrosis %>% select(-c("性别",matches("@1d")))
+# empyrosis = empyrosis_data2[,6:43]
+
+empyrosis_select = test_datasets %>% select(-c("性别",matches("@1d")))
 
 dt_f=empyrosis_select %>% select(c("主要结局：耐受0，不耐受1","呕吐（无0有1）","呕吐（无呕吐0，休克期1，非休克期2，两者都有3）","脓毒症（无0有1）","鼻饲（有1无0）","腹泻","CRRT","@90天死亡（成活0死亡1）"))
 colnames(dt_f)=c("耐受","呕吐","呕吐时期","脓毒症","鼻饲","腹泻","CRRT","死亡")
+
 
 row_ha = rowAnnotation(df=as.data.frame(dt_f[,-1]),
                        col=list(呕吐=c('0' = 'blue','1'='red'),
@@ -99,7 +102,7 @@ row_ha = rowAnnotation(df=as.data.frame(dt_f[,-1]),
                                 )
                         )
 
-h1 = ComplexHeatmap::Heatmap(empyrosis_select[,3:5],
+h1 = ComplexHeatmap::Heatmap(empyrosis_select[,c("TBSA","烧伤指数","III度")] %>% mutate_all(as.numeric),
                         column_title = paste0("Key_Value","_Burning"),  
                         right_annotation = row_ha, 
                         left_annotation = rowAnnotation(df=as.data.frame(dt_f[,c('耐受')]),col=list(耐受=c('0' = 'blue','1'='red'))),
@@ -108,17 +111,16 @@ h1 = ComplexHeatmap::Heatmap(empyrosis_select[,3:5],
                         )
 
 
-tableOne <- CreateTableOne(vars = colnames(select(empyrosis_select, -c("主要结局：耐受0，不耐受1","原因","费用","并发症"))), 
+tableOne <- CreateTableOne(vars = colnames(select(empyrosis_select, -c("病案号","姓名","年龄","体重（kg","主要结局：耐受0，不耐受1","原因","费用","并发症"))), 
                            strata = c("主要结局：耐受0，不耐受1"), 
                            data = empyrosis_select)
 
 tb1 = print(
   tableOne,
-  nonnormal = c("TBSA","烧伤指数"),exact = c("@90天死亡（成活0死亡1）"),
-  showAllLevels = TRUE)     
+  nonnormal = c("TBSA","烧伤指数"),exact = c("@90天死亡（成活0死亡1）"))     
 
 ########index
-empyrosis_index = empyrosis %>% select(c("主要结局：耐受0，不耐受1",matches("@1d")))
+empyrosis_index = test_datasets %>% select(c("主要结局：耐受0，不耐受1",matches("@1d")))
 colnames(empyrosis_index)[1]="耐受"
 
 h2= ComplexHeatmap::Heatmap(empyrosis_index[,-1],
@@ -136,6 +138,46 @@ tb2 = print(
   tableOne,
   nonnormal = c("TBSA","烧伤指数"),
   showAllLevels = TRUE)   
+
+
+
+outpdf=paste("Table1","_nontransform.pdf",sep='')
+pdf(outpdf, width = 16, height = 10, family="GB1")
+
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(nr = 1, nc = 2)))
+    pushViewport(viewport(layout.pos.row = 1, layout.pos.col = 1))
+      draw(h1,
+        heatmap_legend_side = 'bottom',
+        row_sub_title_side = 'left',
+        newpage = FALSE)
+      popViewport()
+
+    pushViewport(viewport(layout.pos.row = 1, layout.pos.col = 2))
+      draw(h2,
+        heatmap_legend_side = 'bottom',
+        row_sub_title_side = 'right',
+        newpage = FALSE)
+      popViewport()
+popViewport(0)
+
+
+t1 <- ggtexttable(as.data.frame(tb1), theme = ttheme("light",base_size = 6,padding = unit(c(4, 4), "mm")))
+t2 <- ggtexttable(as.data.frame(tb2), theme = ttheme("light"))      
+
+print(t1)
+print(t2)
+
+dev.off()
+
+
+
+
+
+
+
+
+
 
 ##regression model
 
@@ -208,32 +250,8 @@ memmod_plot_test <- ROC_curve(fit.mem,dt_test,dt_test$耐受,'混合模型去除
 mem.select.mod_plot <- ROC_curve(fit.mem.select ,dt_train,dt_train$耐受,'混合模型去除随机效应_筛选因子_训练集') 
 mem.select.mod_plot_test <- ROC_curve(fit.mem.select ,dt_test,dt_test$耐受,'混合模型去除随机效应_筛选因子_测试集',test='T') 
 
-outpdf=paste("res","_profile_new.pdf",sep='')
+outpdf=paste("resgression","_profile_new.pdf",sep='')
 pdf(outpdf, width = 16, height = 10, family="GB1")
-
-grid.newpage()
-pushViewport(viewport(layout = grid.layout(nr = 1, nc = 2)))
-    pushViewport(viewport(layout.pos.row = 1, layout.pos.col = 1))
-      draw(h1,
-        heatmap_legend_side = 'bottom',
-        row_sub_title_side = 'left',
-        newpage = FALSE)
-      popViewport()
-
-    pushViewport(viewport(layout.pos.row = 1, layout.pos.col = 2))
-      draw(h2,
-        heatmap_legend_side = 'bottom',
-        row_sub_title_side = 'right',
-        newpage = FALSE)
-      popViewport()
-popViewport(0)
-
-
-
-t1 <- ggtexttable(as.data.frame(tb1), theme = ttheme("light")) 
-t2 <- ggtexttable(as.data.frame(tb2), theme = ttheme("light"))      
-tcom = ggarrange(t1,t2, ncol = 2, nrow = 1,widths=c(1, 1))
-print(tcom)
 
 pcom.glm = ggarrange(t.glm,t.glm.select , ncol = 2, nrow = 1,widths=c(1, 1))
 print(pcom.glm)
