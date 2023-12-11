@@ -67,7 +67,7 @@ ROC_curve <- function(model,data_mat,y,model_name,test=NA){
 #tableOne <- CreateTableOne(data = empyrosis_t , strata = "呕吐（无0有1）", vars = vars, factorVars = factorVars, smd = TRUE)
 
 test_datasets <- read_excel("burn/test_datasets.xlsx", 
-    col_types = c("numeric", "text", "text", 
+    col_types = c("numeric", "text", "numeric", 
         "numeric", "numeric", "numeric", 
         "text", "numeric", "numeric", "numeric", 
         "text", "text", "numeric", "text", 
@@ -83,6 +83,13 @@ test_datasets <- read_excel("burn/test_datasets.xlsx",
         "numeric", "text", "text", "text"))
 
 # empyrosis = empyrosis_data2[,6:43]
+
+test_datasets %>%
+   mutate(年龄 = cut(年龄, breaks = c(-Inf, 60, Inf), right = FALSE, labels = c("0", "1"))) %>%
+   mutate(BMI = cut(BMI, breaks = c(-Inf, 28, Inf), right = FALSE, labels = c("0", "1"))) %>%
+   mutate(`@1d_ALB` = cut(`@1d_ALB`, breaks = c(-Inf, 25, Inf), right = FALSE, labels = c("0", "1"))) %>%
+   mutate(`24h血糖（mmol/L）` = cut(`24h血糖（mmol/L）`, breaks = c(-Inf, 28, Inf), right = FALSE, labels = c("0", "1"))) %>% select(`24h血糖（mmol/L）`)
+
 
 empyrosis_select = test_datasets %>% select(-c("性别",matches("@1d")))
 
