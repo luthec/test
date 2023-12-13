@@ -9,7 +9,7 @@ all_low_dl <- c(0.1,15,0.2,0.2,0.1,2,1,9,5,35,30,3.16,2,67)
 ##lod imputation
 lod_imput <- function(mat) {  
 tar <- colnames(mat)
-low_dl <- dt %>% select(tar)%>% filter(if_any(.cols = tar, ~ ! grepl("^\\d", .))) %>% 
+low_dl <- mat %>% select(tar)%>% filter(if_any(.cols = tar, ~ ! grepl("^\\d", .))) %>% 
                  na.omit() %>% summarise(across(everything(), min)) %>%
                  slice(1) %>% unlist(., use.names=FALSE) %>% readr::parse_number()
 mat1 <- mat %>% mutate_all(~ replace(., grepl("<", .), 0)) %>% mutate(across(tar, readr::parse_number))

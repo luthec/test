@@ -1,4 +1,5 @@
 library(readxl)
+library(mice)
 library(tableone)
 library(dplyr)
 library(ggpubr)
@@ -18,8 +19,11 @@ library(report)
 #library(cvms)
 #library(performance)
 #library(Cairo)
-
 rm(list = ls())
+
+select <- dplyr::select
+
+z_scores <- function(data) (ifelse(!is.na(data), abs(data[!is.na(data)]-mean(data[!is.na(data)]))/sd(data[!is.na(data)]),NA ))
 
 model_index <- function(model,marker_name,model_name){
     #index =  model  %>% 
@@ -66,7 +70,7 @@ ROC_curve <- function(model,data_mat,y,model_name,test=NA){
 
 #tableOne <- CreateTableOne(data = empyrosis_t , strata = "呕吐（无0有1）", vars = vars, factorVars = factorVars, smd = TRUE)
 
-test_datasets <- read_excel("burn/test_datasets.xlsx", 
+test_datasets <- read_excel("test_datasets.xlsx", 
     col_types = c("numeric", "text", "numeric", 
         "numeric", "numeric", "numeric", 
         "text", "numeric", "numeric", "numeric", 
@@ -81,20 +85,21 @@ test_datasets <- read_excel("burn/test_datasets.xlsx",
         "text", "text", "numeric", "numeric", 
         "numeric", "text", "text", "text", 
         "numeric", "text", "text", "text"))
-
+#test_datasets %>% select_if(function(x) any(is.na(x))) %>%  %>% mice(method = "pmm")  %>%  complete() %>% as.matrix()
 # empyrosis = empyrosis_data2[,6:43]
 
-test_datasets %>%
+test_datasets2 <- test_datasets %>%
    mutate(年龄 = cut(年龄, breaks = c(-Inf, 60, Inf), right = FALSE, labels = c("0", "1"))) %>%
    mutate(BMI = cut(BMI, breaks = c(-Inf, 28, Inf), right = FALSE, labels = c("0", "1"))) %>%
    mutate(`@1d_ALB` = cut(`@1d_ALB`, breaks = c(-Inf, 25, Inf), right = FALSE, labels = c("0", "1"))) %>%
-   mutate(`24h血糖（mmol/L）` = cut(`24h血糖（mmol/L）`, breaks = c(-Inf, 28, Inf), right = FALSE, labels = c("0", "1"))) %>% select(`24h血糖（mmol/L）`)
+   mutate(`24h血糖（mmol/L）` = cut(`24h血糖（mmol/L）`, breaks = c(-Inf, 14, Inf), right = FALSE, labels = c("0", "1"))) %>%
+   mutate(HCTdALB = test_datasets$`@1d_hct`/test_datasets$`@1d_ALB`) 
 
 
-empyrosis_select = test_datasets %>% select(-c("性别",matches("@1d")))
+empyrosis_select = test_datasets2 %>% select(-c("性别",matches("@1d")))
 
-dt_f=empyrosis_select %>% select(c("主要结局：耐受0，不耐受1","呕吐（无0有1）","呕吐（无呕吐0，休克期1，非休克期2，两者都有3）","脓毒症（无0有1）","鼻饲（有1无0）","腹泻","CRRT","@90天死亡（成活0死亡1）"))
-colnames(dt_f)=c("耐受","呕吐","呕吐时期","脓毒症","鼻饲","腹泻","CRRT","死亡")
+dt_f=empyrosis_select %>% select(c("主要结局：耐受0，不耐受1","呕吐（无0有1）","呕吐（无呕吐0，休克期1，非休克期2，两者都有3）","脓毒症（无0有1）","鼻饲（有1无0）","腹泻","CRRT","@90天死亡（成活0死亡1）","年龄","BMI"))
+colnames(dt_f)=c("耐受","呕吐","呕吐时期","脓毒症","鼻饲","腹泻","CRRT","死亡","年龄","BMI")
 
 
 row_ha = rowAnnotation(df=as.data.frame(dt_f[,-1]),
@@ -118,7 +123,7 @@ h1 = ComplexHeatmap::Heatmap(empyrosis_select[,c("TBSA","烧伤指数","III度")
                         )
 
 
-tableOne <- CreateTableOne(vars = colnames(select(empyrosis_select, -c("病案号","姓名","年龄","体重（kg","主要结局：耐受0，不耐受1","原因","费用","并发症"))), 
+tableOne <- CreateTableOne(vars = colnames(select(empyrosis_select, -c("病案号","姓名","体重（kg","主要结局：耐受0，不耐受1","原因","费用","并发症"))), 
                            strata = c("主要结局：耐受0，不耐受1"), 
                            data = empyrosis_select)
 
@@ -127,17 +132,18 @@ tb1 = print(
   nonnormal = c("TBSA","烧伤指数"),exact = c("@90天死亡（成活0死亡1）"))     
 
 ########index
-empyrosis_index = test_datasets %>% select(c("主要结局：耐受0，不耐受1",matches("@1d")))
-colnames(empyrosis_index)[1]="耐受"
+empyrosis_index = test_datasets2 %>% select(c("主要结局：耐受0，不耐受1",matches("@1d"),"HCTdALB","24h血糖（mmol/L）"))
+#colnames(empyrosis_index)=c("耐受","dHB","d_hct","d_plt","d_淋巴细胞","d_TP","d_ALB","d_TBIL","d_DBIL","d_CRE","d_BUN","d_PA","d_LAC","HCTdALB","h血糖")
+colnames(empyrosis_index)[1]=c("耐受")
 
-h2= ComplexHeatmap::Heatmap(empyrosis_index[,-1],
+h2= ComplexHeatmap::Heatmap(empyrosis_index %>% select(is.numeric),
                         column_title = paste0("Key_Value","_Blood_index"),  
                         left_annotation = rowAnnotation(df=as.data.frame(empyrosis_index[,c('耐受')]),col=list(耐受=c('0' = 'blue','1'='red'))),
                         row_split = empyrosis_index$耐受,
                         col = rev(brewer.pal(10,"RdBu"))
                         )
 
-tableOne <- CreateTableOne(vars = colnames(select(empyrosis_index, -c("耐受"))), 
+tableOne <- CreateTableOne(vars = colnames(dplyr::select(empyrosis_index, -c("耐受"))), 
                            strata = c("耐受"), 
                            data = empyrosis_index)
 
@@ -148,7 +154,7 @@ tb2 = print(
 
 
 
-outpdf=paste("Table1","_nontransform.pdf",sep='')
+outpdf=paste("Table1","_transformed.pdf",sep='')
 pdf(outpdf, width = 16, height = 10, family="GB1")
 
 grid.newpage()
