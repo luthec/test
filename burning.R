@@ -183,15 +183,6 @@ print(t2)
 
 dev.off()
 
-
-
-
-
-
-
-
-
-
 ##regression model
 
 biomarker="ALL_X"
