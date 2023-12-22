@@ -91,25 +91,31 @@ test_datasets <- read_excel("test_datasets.xlsx",
 test_datasets2 <- test_datasets %>%
    mutate(年龄 = cut(年龄, breaks = c(-Inf, 60, Inf), right = FALSE, labels = c("0", "1"))) %>%
    mutate(BMI = cut(BMI, breaks = c(-Inf, 28, Inf), right = FALSE, labels = c("0", "1"))) %>%
+   mutate(HCTdALB = test_datasets$`@1d_hct`/test_datasets$`@1d_ALB`) %>%
    mutate(`@1d_ALB` = cut(`@1d_ALB`, breaks = c(-Inf, 25, Inf), right = FALSE, labels = c("0", "1"))) %>%
    mutate(`24h血糖（mmol/L）` = cut(`24h血糖（mmol/L）`, breaks = c(-Inf, 14, Inf), right = FALSE, labels = c("0", "1"))) %>%
-   mutate(HCTdALB = test_datasets$`@1d_hct`/test_datasets$`@1d_ALB`) 
+   mutate(`基础疾病(0无1高血压2糖尿病3两者都有4其他)`= ifelse(`基础疾病(0无1高血压2糖尿病3两者都有4其他)`==0, "0", "1"))
+   
+
 
 
 empyrosis_select = test_datasets2 %>% select(-c("性别",matches("@1d")))
 
-dt_f=empyrosis_select %>% select(c("主要结局：耐受0，不耐受1","呕吐（无0有1）","呕吐（无呕吐0，休克期1，非休克期2，两者都有3）","脓毒症（无0有1）","鼻饲（有1无0）","腹泻","CRRT","@90天死亡（成活0死亡1）","年龄","BMI"))
-colnames(dt_f)=c("耐受","呕吐","呕吐时期","脓毒症","鼻饲","腹泻","CRRT","死亡","年龄","BMI")
+dt_f=empyrosis_select %>% select(c("主要结局：耐受0，不耐受1","呕吐（无0有1）","呕吐（无呕吐0，休克期1，非休克期2，两者都有3）","脓毒症（无0有1）","鼻饲（有1无0）","腹泻","CRRT","@90天死亡（成活0死亡1）","年龄","BMI","吸入性损伤...12"))
+colnames(dt_f)=c("耐受","呕吐","呕吐时期","脓毒症","鼻饲","腹泻","CRRT","死亡","年龄","BMI","吸入性损伤")
 
 
 row_ha = rowAnnotation(df=as.data.frame(dt_f[,-1]),
                        col=list(呕吐=c('0' = 'blue','1'='red'),
                                 呕吐时期=c('0' = 'blue','1'='red','2'='yellow','3'='black'),
-                                脓毒症=c('1'='pink','0'='darkgreen'),
-                                鼻饲=c('1'='pink','0'='darkgreen'),
+                                年龄=c('1'='pink','0'='darkgreen'),
+                                BMI=c('1'='pink','0'='darkgreen'),
                                 腹泻=c('1'='pink','0'='darkgreen'),
                                 CRRT=c('1'='pink','0'='darkgreen'),
-                                死亡 =c('1'='pink','0'='darkgreen')                              
+                                死亡 =c('1'='pink','0'='darkgreen'),
+                                脓毒症=c('1'='pink','0'='darkgreen'),
+                                鼻饲=c('1'='pink','0'='darkgreen') ,
+                                 吸入性损伤=c('1'='pink','0'='darkgreen')                             
                                 # Onset_admission=circlize::colorRamp2(c(-1,0,1), c("blue", "white", "red"))
                                 )
                         )
@@ -123,13 +129,11 @@ h1 = ComplexHeatmap::Heatmap(empyrosis_select[,c("TBSA","烧伤指数","III度")
                         )
 
 
-tableOne <- CreateTableOne(vars = colnames(select(empyrosis_select, -c("病案号","姓名","体重（kg","主要结局：耐受0，不耐受1","原因","费用","并发症"))), 
+tableOne1 <- CreateTableOne(vars = colnames(select(test_datasets2, -c("病案号","姓名","体重（kg","主要结局：耐受0，不耐受1","原因","费用","并发症","HCTdALB","吸入性损伤...46"))), 
                            strata = c("主要结局：耐受0，不耐受1"), 
                            data = empyrosis_select)
 
-tb1 = print(
-  tableOne,
-  nonnormal = c("TBSA","烧伤指数"),exact = c("@90天死亡（成活0死亡1）"))     
+tb1 = print(tableOne1)     
 
 ########index
 empyrosis_index = test_datasets2 %>% select(c("主要结局：耐受0，不耐受1",matches("@1d"),"HCTdALB","24h血糖（mmol/L）"))
@@ -143,18 +147,15 @@ h2= ComplexHeatmap::Heatmap(empyrosis_index %>% select(is.numeric),
                         col = rev(brewer.pal(10,"RdBu"))
                         )
 
-tableOne <- CreateTableOne(vars = colnames(dplyr::select(empyrosis_index, -c("耐受"))), 
+tableOne2 <- CreateTableOne(vars = colnames(dplyr::select(empyrosis_index, -c("耐受"))), 
                            strata = c("耐受"), 
                            data = empyrosis_index)
 
-tb2 = print(
-  tableOne,
-  nonnormal = c("TBSA","烧伤指数"),
-  showAllLevels = TRUE)   
+tb2 = print(tableOne2)   
 
 
 
-outpdf=paste("Table1","_transformed.pdf",sep='')
+outpdf=paste("Table1","_non.pdf",sep='')
 pdf(outpdf, width = 16, height = 10, family="GB1")
 
 grid.newpage()
@@ -185,23 +186,28 @@ dev.off()
 
 ##regression model
 
+dt_select = test_datasets2 %>%  
+select(-c("病案号","姓名","体重（kg","身高m","天数","中性粒细胞","吸入性损伤...46"))   %>% rename_with(~str_remove(., '[@）]+')) %>% mutate_if(is.character, as.factor) %>% na.omit()
+colnames(dt_select) <- gsub('[(（].*','',colnames(dt_select))
+colnames(dt_select) [25] = "耐受"
+#colnames(dt_select) [40] = "吸入性损伤"
+colnames(dt_select) [8] = "吸入性损伤"
+
 biomarker="ALL_X"
 
-dt_select = empyrosis_data2 %>% 
-            select(c("主要结局：耐受0，不耐受1","年龄","性别","BMI","TBSA","烧伤指数","III度",matches("@1d"),"呕吐（无0有1）","呕吐（无呕吐0，休克期1，非休克期2，两者都有3）","脓毒症（无0有1）","鼻饲（有1无0）","腹泻","CRRT","@90天死亡（成活0死亡1）")) %>% 
-            mutate_at(vars(!c("BMI","TBSA","烧伤指数","III度",matches("@1d"))), as.factor) %>%
-            mutate_at(vars("年龄"), as.numeric)
+#dt_select = empyrosis_data2 %>% 
+#            select(c("主要结局：耐受0，不耐受1","年龄","性别","BMI","TBSA","烧伤指数","III度",matches("@1d"),"呕吐（无0有1）","呕吐（无呕吐0，休克期1，非休克期2，两者都有3）","脓毒症（无0有1）","鼻饲（有1无0）","腹泻","CRRT","@90天死亡（成活0死亡1）")) %>% 
+#            mutate_at(vars(!c("BMI","TBSA","烧伤指数","III度",matches("@1d"))), as.factor) %>%
+#            mutate_at(vars("年龄"), as.numeric)
 
 
-colnames(dt_select)[c(1,20:26)]=c("耐受","呕吐","呕吐时期","脓毒症","鼻饲","腹泻","CRRT","死亡")
+# index <- sample(nrow(dt_na_removed),nrow(dt_na_removed)*0.80)
+# dt_train = dt_na_removed[index,]
+# dt_test = dt_na_removed[-index,]
 
-dt_na_removed <- na.omit(dt_select)
 
-index <- sample(nrow(dt_na_removed),nrow(dt_na_removed)*0.80)
-dt_train = dt_na_removed[index,]
-dt_test = dt_na_removed[-index,]
 
-fit.glm = glm(耐受 ~ 年龄+性别+BMI+TBSA+烧伤指数+III度+脓毒症+`@1d_TBIL`+`@1d_DBIL`+`@1d_BUN`+`@1d_LAC`+`@1d_CRE`+`@1d_hct`+`@1d_ALB`+`@1dHB`+`@1d_淋巴细胞`+`@1d_plt`+`@1d_PA`+`@1d_TP`, family = binomial,data=dt_train) 
+fit.glm = glm(耐受 ~ 年龄+性别+BMI+吸入性损伤+天数+基础疾病+`24h血糖`+TBSA+烧伤指数+III度+脓毒症+HCTdALB+`1d_ALB`+`1dHB`+`1d_plt`+`1d_淋巴细胞`+`1d_TP`+`1d_TBIL`+`1d_DBIL`+`1d_CRE`+`1d_BUN`+`1d_PA`+`1d_LAC`, family = binomial,data=dt_select) 
 
 fit.glm.select =  fit.glm %>% select_parameters()
 
@@ -209,49 +215,41 @@ t.glm <- model_index(fit.glm,biomarker,"Generalized Linear Model")
 
 t.glm.select <- model_index(fit.glm.select ,biomarker,"Generalized Linear Model with Select variable")
 
-# ROC curve for first model
-
-glmmod_plot <- ROC_curve(fit.glm,dt_train,dt_train$耐受,'广义线性模型_未筛选因子_训练集') 
-glmmod_plot_test <- ROC_curve(fit.glm,dt_test,dt_test$耐受,'广义线性模型_未筛选因子_测试集',test='T') 
-
-glm.select.mod_plot <- ROC_curve(fit.glm.select,dt_train,dt_train$耐受,'广义线性模型_筛选因子_训练集') 
-glm.select.mod_plot_test <- ROC_curve(fit.glm.select,dt_test,dt_test$耐受,'广义线性模型_筛选因子_测试集',test='T') 
 
 ######
 
 biomarker="Select_X & remove random effects"
 
-dt_select2 = empyrosis_data2 %>% 
-            select(c("原因","受伤至入院时间（h）","启动时间（天）","主要结局：耐受0，不耐受1","年龄","性别","BMI","TBSA","烧伤指数","III度",matches("@1d"),"呕吐（无0有1）","呕吐（无呕吐0，休克期1，非休克期2，两者都有3）","脓毒症（无0有1）","鼻饲（有1无0）","腹泻","CRRT","@90天死亡（成活0死亡1）")) %>% 
-            mutate_at(vars(!c("BMI","TBSA","烧伤指数","III度",matches("@1d"))), as.factor) %>%
-            mutate_at(vars("年龄"), as.numeric) %>%
-            mutate_at(vars(c("原因","受伤至入院时间（h）","启动时间（天）")), as.factor)
+fit.mem <- glmer(耐受 ~ (1 | 原因) + (1 | 启动时间) +年龄+性别+BMI+吸入性损伤+天数+基础疾病+`24h血糖`+TBSA+烧伤指数+III度+脓毒症+HCTdALB+`1d_ALB`+`1dHB`+`1d_plt`+`1d_淋巴细胞`+`1d_TP`+`1d_TBIL`+`1d_DBIL`+`1d_CRE`+`1d_BUN`+`1d_PA`+`1d_LAC`, data = dt_select, family = binomial, control = glmerControl(optimizer = "bobyqa")) 
 
-
-colnames(dt_select2)[c(1:4,23:29)]=c("原因","入院时间","启动时间","耐受","呕吐","呕吐时期","脓毒症","鼻饲","腹泻","CRRT","死亡")
-
-dt_na_removed <- na.omit(dt_select2)
-
-
-index <- sample(nrow(dt_na_removed),nrow(dt_na_removed)*0.80)
-dt_train = dt_na_removed[index,]
-dt_test = dt_na_removed[-index,]
-
-
-fit.mem <- glmer(耐受 ~ (1 | 原因) +(1 | 入院时间) +(1 | 启动时间) +年龄+性别+BMI+TBSA+烧伤指数+III度+脓毒症+`@1d_TBIL`+`@1d_DBIL`+`@1d_BUN`+`@1d_LAC`+`@1d_CRE`+`@1d_hct`+`@1d_ALB`+`@1dHB`+`@1d_淋巴细胞`+`@1d_plt`+`@1d_PA`+`@1d_TP`, data = dt_train, family = binomial, control = glmerControl(optimizer = "bobyqa")) 
-fit.mem.select <- glmer(耐受 ~ (1 | 原因) +(1 | 入院时间) +(1 | 启动时间) +年龄+性别+BMI+TBSA+烧伤指数+III度+脓毒症+`@1d_TBIL`+`@1d_DBIL`+`@1d_BUN`+`@1d_LAC`+`@1d_CRE`+`@1d_hct`, data = dt_train, family = binomial) %>%
-  select_parameters()
+fit.mem.select <- glmer(耐受 ~ (1 | 原因) + (1 | 启动时间)+ 年龄 + 吸入性损伤 + 烧伤指数 + HCTdALB+ `1d_plt`+`1d_TBIL`, data = dt_select, family = binomial)
 
 t.mem <- model_index(fit.mem,biomarker,"Mix Model random effects removed")
 
 t.mem.select <- model_index(fit.mem.select ,biomarker,"Mix Model with Select variable")
 
+# ROC curve for first model
+
+validate_datasets <- read_excel("validate_datasets.xlsx")
+
+dt_test= validate_datasets %>%
+   mutate(HCTdALB = validate_datasets$`@1d_hct`/validate_datasets$`@1d_ALB`) %>% 
+   select(c("主要结局：耐受0，不耐受1","原因","启动时间（天）","年龄","吸入性损伤","烧伤指数","HCTdALB","@1d_plt","@1d_TBIL")) %>%
+   mutate(年龄 = str_remove(年龄, "岁")) %>% mutate_at(vars("年龄"), as.numeric) %>%
+   mutate(年龄 = cut(年龄, breaks = c(-Inf, 60, Inf), right = FALSE, labels = c("0", "1"))) %>% 
+   mutate_at(vars(c("主要结局：耐受0，不耐受1","原因","启动时间（天）","年龄","吸入性损伤")), as.factor) %>% 
+   rename_with(~str_remove(., '[@）]+'))  %>% na.omit()
+colnames(dt_test)[1:3] = c("耐受", "原因","启动时间")
+
+
+glmmod_plot <- ROC_curve(fit.glm,dt_select,dt_select$耐受,'广义线性模型_未筛选因子_训练集') 
+glm.select.mod_plot <- ROC_curve(fit.glm.select,dt_select,dt_select$耐受,'广义线性模型_筛选因子_训练集') 
+glm.select.mod_plot_test <- ROC_curve(fit.glm.select,dt_test,dt_test$耐受,'广义线性模型_筛选因子_测试集',test='T') 
+
 # ROC curve for second model
 
-memmod_plot <- ROC_curve(fit.mem,dt_train,dt_train$耐受,'混合模型去除随机效应_未筛选因子_训练集') 
-memmod_plot_test <- ROC_curve(fit.mem,dt_test,dt_test$耐受,'混合模型去除随机效应_未筛选因子_测试集',test='T') 
-
-mem.select.mod_plot <- ROC_curve(fit.mem.select ,dt_train,dt_train$耐受,'混合模型去除随机效应_筛选因子_训练集') 
+memmod_plot <- ROC_curve(fit.mem,dt_select,dt_select$耐受,'混合模型去除随机效应_未筛选因子_训练集') 
+mem.select.mod_plot <- ROC_curve(fit.mem.select ,dt_select,dt_select$耐受,'混合模型去除随机效应_筛选因子_训练集') 
 mem.select.mod_plot_test <- ROC_curve(fit.mem.select ,dt_test,dt_test$耐受,'混合模型去除随机效应_筛选因子_测试集',test='T') 
 
 outpdf=paste("resgression","_profile_new.pdf",sep='')
@@ -259,20 +257,63 @@ pdf(outpdf, width = 16, height = 10, family="GB1")
 
 pcom.glm = ggarrange(t.glm,t.glm.select , ncol = 2, nrow = 1,widths=c(1, 1))
 print(pcom.glm)
-
 ggpubr::ggarrange(glmmod_plot, glm.select.mod_plot, nrow = 1)
 
 
 pcom.mem = ggarrange(t.mem,t.mem.select , ncol = 2, nrow = 1,widths=c(1, 1))
 print(pcom.mem)
-
 ggpubr::ggarrange(memmod_plot, mem.select.mod_plot, nrow = 1)
 
-ggpubr::ggarrange(glmmod_plot, memmod_plot, nrow = 1)
-ggpubr::ggarrange(glmmod_plot_test, memmod_plot_test, nrow = 1)
 
-ggpubr::ggarrange(glm.select.mod_plot, mem.select.mod_plot, nrow = 1)
 ggpubr::ggarrange(glm.select.mod_plot_test, mem.select.mod_plot_test, nrow = 1)
 
 
 dev.off()
+
+
+##################
+library(mlr3)
+library(mlr3learners)
+library(mlr3viz)
+library(skimr)
+
+dt_test = dt_select  %>% 
+    select(c("耐受","年龄","性别","BMI","吸入性损伤","天数","基础疾病","24h血糖","TBSA","烧伤指数","III度","脓毒症","HCTdALB","1d_ALB","1dHB","1d_plt","1d_淋巴细胞","1d_TP","1d_TBIL","1d_DBIL","1d_CRE","1d_BUN","1d_PA","1d_LAC"))
+
+colnames(dt_test)=c("Res","Age","Sex","Bmi","Inhalation_injury","Day","Underlying_disease","Glu_24h","TBSA","Burn_index","III_index","Sepsis","HCTdALB","ALB","HB","Plt","Lymphocyte","TP","TBIL","DBIL","CRE","BUN","PA","LAC")
+
+skimr::skim(dt_test)
+
+task = TaskClassif$new("shao_test", dt_test, target = "Res")
+
+
+learner_logreg = lrn("classif.log_reg")
+learner_logreg$train(task)
+
+
+
+
+train_set = sample(task$row_ids, 0.8 * task$nrow)
+test_set = setdiff(task$row_ids, train_set)
+
+learner_logreg$train(task, row_ids = train_set)
+
+summary(learner_logreg$model) 
+
+autoplot(learner_logreg$model, type = "roc")
+
+
+learner_rf = lrn("classif.ranger", importance = "permutation")
+learner_rf$train(task, row_ids = train_set)
+
+importance = as.data.table(learner_rf$importance(), keep.rownames = TRUE)
+
+colnames(importance) = c("Feature", "Importance")
+ggplot(data=importance,aes(x = reorder(Feature, Importance), y = Importance)) + geom_col() + coord_flip() + xlab("")
+
+
+lrn_ranger = lrn("classif.ranger", predict_type = "prob")
+splits = mlr3::partition(task, ratio = 0.8)
+
+lrn_ranger$train(task, splits$train)
+prediction = lrn_ranger$predict(task, splits$test)
