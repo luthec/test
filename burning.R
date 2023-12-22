@@ -317,3 +317,5 @@ splits = mlr3::partition(task, ratio = 0.8)
 
 lrn_ranger$train(task, splits$train)
 prediction = lrn_ranger$predict(task, splits$test)
+
+autoplot(prediction, type = "roc")
