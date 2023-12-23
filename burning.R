@@ -310,15 +310,18 @@ train_sets = list(1:nrow(dt_train), (nrow(dt_train)+1):(nrow(dt_train)+nrow(dt_t
 test_sets = list((nrow(dt_train)+1):(nrow(dt_train)+nrow(dt_test)), 1:nrow(dt_train))
 custom$instantiate(task, train_sets, test_sets)
 
-custom$train_set(1)
+custom1 = rsmp("custom")
+train_sets = list(1:nrow(dt_train))
+test_sets = list((nrow(dt_train)+1):(nrow(dt_train)+nrow(dt_test)))
+custom1$instantiate(task, train_sets, test_sets)
 
 #task = TaskClassif$new("shao_test", dt_train, target = "Res")
 
 
-at_log_reg = auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.log_reg", predict_type = "prob"),resampling = rsmp("cv", folds = 5), measure = msr("classif.auc"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
-at_ranger = auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.ranger", predict_type = "prob"),resampling = rsmp("cv", folds = 5), measure = msr("classif.auc"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
+at_log_reg = auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.log_reg", predict_type = "prob"),resampling = rsmp("cv", folds = 3), measure = msr("classif.auc"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
+at_ranger = auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.ranger", predict_type = "prob"),resampling = rsmp("cv", folds = 3), measure = msr("classif.auc"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
 # at_svm = auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.svm", predict_type = "prob"),resampling = rsmp("cv", folds = 5), measure = msr("classif.auc"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
-at_rpart = auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.rpart", predict_type = "prob"),resampling = rsmp("cv", folds = 5), measure = msr("classif.auc"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
+at_rpart = auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.rpart", predict_type = "prob"),resampling = rsmp("cv", folds = 3), measure = msr("classif.auc"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
 
 
 learners <- c(at_log_reg,  at_ranger,at_rpart)
@@ -326,7 +329,7 @@ measures <- msrs(c("classif.auc", "classif.bacc", "classif.bbrier"))
 
 #Benchmarking
 set.seed(372)
-design = benchmark_grid(tasks =task, learners = learners, resamplings = custom )
+design = benchmark_grid(tasks =task, learners = learners, resamplings = rsmp("cv", folds = 5) )
 bmr = benchmark(design, store_models = TRUE)
 results <- bmr$aggregate(measures)
 print(results)
