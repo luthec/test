@@ -274,40 +274,139 @@ dev.off()
 ##################
 library(mlr3)
 library(mlr3learners)
+library(mlr3tuning)
+library(mlr3fselect)
 library(mlr3viz)
 library(skimr)
 
-dt_test = dt_select  %>% 
+dt_train = dt_select  %>% 
     select(c("耐受","年龄","性别","BMI","吸入性损伤","天数","基础疾病","24h血糖","TBSA","烧伤指数","III度","脓毒症","HCTdALB","1d_ALB","1dHB","1d_plt","1d_淋巴细胞","1d_TP","1d_TBIL","1d_DBIL","1d_CRE","1d_BUN","1d_PA","1d_LAC"))
 
+colnames(dt_train)=c("Res","Age","Sex","Bmi","Inhalation_injury","Day","Underlying_disease","Glu_24h","TBSA","Burn_index","III_index","Sepsis","HCTdALB","ALB","HB","Plt","Lymphocyte","TP","TBIL","DBIL","CRE","BUN","PA","LAC")
+
+dt_test = validate_datasets %>%
+   mutate(年龄 = str_remove(年龄, "岁")) %>% mutate_at(vars("年龄"), as.numeric) %>%
+   mutate(年龄 = cut(年龄, breaks = c(-Inf, 60, Inf), right = FALSE, labels = c("0", "1"))) %>%
+   mutate(BMI = cut(BMI, breaks = c(-Inf, 28, Inf), right = FALSE, labels = c("0", "1"))) %>%
+   mutate(HCTdALB = validate_datasets$`@1d_hct`/validate_datasets$`@1d_ALB`) %>% 
+   mutate(`@1d_ALB` = cut(`@1d_ALB`, breaks = c(-Inf, 25, Inf), right = FALSE, labels = c("0", "1"))) %>%
+   mutate(`24h血糖` = cut(`24h血糖`, breaks = c(-Inf, 14, Inf), right = FALSE, labels = c("0", "1"))) %>%
+   mutate(`基础疾病(0无1高血压2糖尿病3两者都有4肿瘤5其他)`= ifelse(`基础疾病(0无1高血压2糖尿病3两者都有4肿瘤5其他)`==0, "0", "1")) %>%
+   mutate(天数 = cut(天数, breaks = c(-Inf, 4, Inf), right = FALSE, labels = c("0", "1"))) %>%
+   select(c("主要结局：耐受0，不耐受1","年龄","性别","BMI","吸入性损伤","天数","基础疾病(0无1高血压2糖尿病3两者都有4肿瘤5其他)","24h血糖","TBSA","烧伤指数","III度","脓毒症（无0有1）","HCTdALB","@1d_ALB","@1dHB","@1d_plt","@1d_淋巴细胞","@1d_TP","@1d_TBIL","@1d_DBIL","@1d_CRE","@1d_BUN","@1d_PA","@1d_LAC")) %>% 
+   mutate_if(is.character, as.factor) %>% na.omit()
 colnames(dt_test)=c("Res","Age","Sex","Bmi","Inhalation_injury","Day","Underlying_disease","Glu_24h","TBSA","Burn_index","III_index","Sepsis","HCTdALB","ALB","HB","Plt","Lymphocyte","TP","TBIL","DBIL","CRE","BUN","PA","LAC")
 
 skimr::skim(dt_test)
 
-task = TaskClassif$new("shao_test", dt_test, target = "Res")
+dataset = rbind(dt_train,dt_test) %>%
+   select(c("Res", "Age","Inhalation_injury","Burn_index","HCTdALB","Plt","TBIL"))
+
+
+task = TaskClassif$new("shao_test", dataset, target = "Res")
+
+custom = rsmp("custom")
+train_sets = list(1:nrow(dt_train), (nrow(dt_train)+1):(nrow(dt_train)+nrow(dt_test)))
+test_sets = list((nrow(dt_train)+1):(nrow(dt_train)+nrow(dt_test)), 1:nrow(dt_train))
+custom$instantiate(task, train_sets, test_sets)
+
+custom$train_set(1)
+
+#task = TaskClassif$new("shao_test", dt_train, target = "Res")
+
+
+at_log_reg = auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.log_reg", predict_type = "prob"),resampling = rsmp("cv", folds = 5), measure = msr("classif.auc"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
+at_ranger = auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.ranger", predict_type = "prob"),resampling = rsmp("cv", folds = 5), measure = msr("classif.auc"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
+# at_svm = auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.svm", predict_type = "prob"),resampling = rsmp("cv", folds = 5), measure = msr("classif.auc"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
+at_rpart = auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.rpart", predict_type = "prob"),resampling = rsmp("cv", folds = 5), measure = msr("classif.auc"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
+
+
+learners <- c(at_log_reg,  at_ranger,at_rpart)
+measures <- msrs(c("classif.auc", "classif.bacc", "classif.bbrier"))
+
+#Benchmarking
+set.seed(372)
+design = benchmark_grid(tasks =task, learners = learners, resamplings = custom )
+bmr = benchmark(design, store_models = TRUE)
+results <- bmr$aggregate(measures)
+print(results)
+autoplot(bmr, measure = msr("classif.auc"))
+autoplot(bmr, type = "roc")
+
+
+
+design = benchmark_grid(
+  tasks = task,
+  learners = lrns(c("classif.log_reg", "classif.ranger","classif.rpart"),predict_type = "prob"),
+  # resampling = rsmp("cv", folds = 5)
+  resamplings = custom 
+)
+
+
+bmr <-  benchmark(design)
+
+autoplot(bmr, type = "roc")
+
+bmr$score(msr("classif.auc"))
+
+aggr <-  bmr$aggregate(msrs(c("classif.acc", "time_train")))
+as.data.table(aggr)[, .(learner_id, classif.acc, time_train)]
+
+
+
+
+
+
+
+
+
+
+
+####################backup code
+
+
+
+
+
+
+
 
 
 learner_logreg = lrn("classif.log_reg")
 learner_logreg$train(task)
 
-
-
-
+######80 training sets
 train_set = sample(task$row_ids, 0.8 * task$nrow)
 test_set = setdiff(task$row_ids, train_set)
-
 learner_logreg$train(task, row_ids = train_set)
 
 summary(learner_logreg$model) 
 
-autoplot(learner_logreg$model, type = "roc")
+
+auto <- auto_fselector(
+  fselector = fs("random_search"),
+  learner = lrn("classif.log_reg"),
+  resampling = rsmp("holdout"),
+  measure = msr("classif.acc"),
+  terminator = trm("evals", n_evals = 10)
+)
+grid <-  benchmark_grid(
+  task = task,
+  learner = list(auto, lrn("classif.log_reg")),
+  resampling = rsmp("cv", folds = 3)
+)
+
+bmr <-  benchmark(grid)
+
+aggr <-  bmr$aggregate(msrs(c("classif.acc", "time_train")))
+as.data.table(aggr)[, .(learner_id, classif.acc, time_train)]
 
 
+#####random forest
 learner_rf = lrn("classif.ranger", importance = "permutation")
 learner_rf$train(task, row_ids = train_set)
 
 importance = as.data.table(learner_rf$importance(), keep.rownames = TRUE)
-
 colnames(importance) = c("Feature", "Importance")
 ggplot(data=importance,aes(x = reorder(Feature, Importance), y = Importance)) + geom_col() + coord_flip() + xlab("")
 
@@ -317,5 +416,25 @@ splits = mlr3::partition(task, ratio = 0.8)
 
 lrn_ranger$train(task, splits$train)
 prediction = lrn_ranger$predict(task, splits$test)
-
 autoplot(prediction, type = "roc")
+prediction$score(msr("classif.auc"))
+
+
+
+library(patchwork)
+
+design = benchmark_grid(
+  tasks = task,
+  learners = lrns(c("classif.log_reg", "classif.ranger"),predict_type = "prob"),
+  resamplings = rsmp("cv", folds = 5)
+)
+bmr = benchmark(design)
+autoplot(bmr, type = "roc") +
+  plot_layout(guides = "collect")
+
+
+autoplot(bmr, measure = msr("classif.auc"))
+autoplot(bmr, type = "roc")
+
+
+rr$learners[[1]]$predict_newdata(dat_1[rr$resampling$test_set(1), ], task = rr$task)
