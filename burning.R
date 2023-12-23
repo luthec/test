@@ -323,8 +323,15 @@ at_ranger = auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.ranger
 # at_svm = auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.svm", predict_type = "prob"),resampling = rsmp("cv", folds = 5), measure = msr("classif.auc"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
 at_rpart = auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.rpart", predict_type = "prob"),resampling = rsmp("cv", folds = 3), measure = msr("classif.auc"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
 
+auto <- auto_fselector(
+  fselector = fs("random_search"),
+  learner = lrn("classif.log_reg", predict_type = "prob"),
+  resampling = rsmp("holdout"),
+  measure = msr("classif.auc"),
+  terminator = trm("evals", n_evals = 10)
+)
 
-learners <- c(at_log_reg,  at_ranger,at_rpart)
+learners <- c(at_log_reg,  at_ranger,at_rpart,auto)
 measures <- msrs(c("classif.auc", "classif.bacc", "classif.bbrier"))
 
 #Benchmarking
