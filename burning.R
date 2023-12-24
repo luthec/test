@@ -299,8 +299,9 @@ colnames(dt_test)=c("Res","Age","Sex","Bmi","Inhalation_injury","Day","Underlyin
 
 skimr::skim(dt_test)
 
-dataset = rbind(dt_train,dt_test) %>%
-   select(c("Res", "Age","Inhalation_injury","Burn_index","HCTdALB","Plt","TBIL"))
+dataset = rbind(dt_train,dt_test) %>% select(c("Res", "Age","Inhalation_injury","Burn_index","HCTdALB","Plt","TBIL"))
+
+dataset = dataset %>% mutate(across(where(~all(. %in% c(0, 1))), factor, labels = c(FALSE, TRUE))) %>% mutate_if(is.factor, as.logical) %>% mutate_at(vars("Res"), as.factor)
 
 
 task = TaskClassif$new("shao_test", dataset, target = "Res")
@@ -319,13 +320,12 @@ custom1$instantiate(task, train_sets, test_sets)
 
 at_featureless = auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.featureless", predict_type = "prob"),resampling = rsmp("cv", folds = 3), measure = msr("classif.auc"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
 at_log_reg = auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.log_reg", predict_type = "prob"),resampling = rsmp("cv", folds = 3), measure = msr("classif.auc"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
-# at_cv_glmnet = auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.cv_glmnet", predict_type = "prob"),resampling = rsmp("cv", folds = 3), measure = msr("classif.auc"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
-
+at_cv_glmnet = auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.cv_glmnet", predict_type = "prob"),resampling = rsmp("cv", folds = 3), measure = msr("classif.auc"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
 at_lda= auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.lda", predict_type = "prob"),resampling = rsmp("cv", folds = 3), measure = msr("classif.auc"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
 at_naive_bayes = auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.naive_bayes", predict_type = "prob"),resampling = rsmp("cv", folds = 3), measure = msr("classif.auc"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
-# at_xgboost = auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.xgboost", predict_type = "prob"),resampling = rsmp("cv", folds = 3), measure = msr("classif.auc"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
+at_xgboost = auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.xgboost", predict_type = "prob"),resampling = rsmp("cv", folds = 3), measure = msr("classif.auc"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
 at_ranger = auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.ranger", predict_type = "prob"),resampling = rsmp("cv", folds = 3), measure = msr("classif.auc"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
-# at_svm = auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.svm", predict_type = "prob"),resampling = rsmp("cv", folds = 5), measure = msr("classif.auc"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
+at_svm = auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.svm", predict_type = "prob"),resampling = rsmp("cv", folds = 5), measure = msr("classif.auc"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
 at_rpart = auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.rpart", predict_type = "prob"),resampling = rsmp("cv", folds = 3), measure = msr("classif.auc"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
 
 auto <- auto_fselector(
@@ -336,7 +336,7 @@ auto <- auto_fselector(
   terminator = trm("evals", n_evals = 10)
 )
 
-learners <- c(auto,at_featureless,at_log_reg,at_lda,at_naive_bayes,at_ranger,at_rpart)
+learners <- c(auto,at_featureless,at_log_reg,at_cv_glmnet, at_lda,at_naive_bayes,at_xgboost,at_ranger,at_svm,at_rpart)
 # learners = po("encode") %>>% learners
 measures <- msrs(c("classif.auc", "classif.bacc", "classif.bbrier"))
 
@@ -350,7 +350,7 @@ autoplot(bmr, measure = msr("classif.auc"))
 autoplot(bmr, type = "roc")
 
 #########traning and test new data
-at_log_reg$train(task)
+at_cv_glmnet$train(task)
 
 at_log_reg$predict_newdata(dataset)
 
