@@ -279,6 +279,12 @@ library(mlr3fselect)
 library(mlr3viz)
 library(skimr)
 
+###useful convert
+# data = final1 %>% mutate_at(vars(one_of("host")), funs( as.factor)) 
+# data = final1 %>% mutate_if(sapply(data_test, is.character), as.factor)
+# dataset %>% mutate(across(where(~all(. %in% c(0, 1))), factor, labels = c(FALSE, TRUE))) %>% mutate_if(is.factor, as.logical) %>% mutate_at(vars("Res"), as.factor)
+
+
 dt_train = dt_select  %>% 
     select(c("耐受","年龄","性别","BMI","吸入性损伤","天数","基础疾病","24h血糖","TBSA","烧伤指数","III度","脓毒症","HCTdALB","1d_ALB","1dHB","1d_plt","1d_淋巴细胞","1d_TP","1d_TBIL","1d_DBIL","1d_CRE","1d_BUN","1d_PA","1d_LAC"))
 
