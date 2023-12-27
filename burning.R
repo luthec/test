@@ -309,7 +309,6 @@ dataset = rbind(dt_train,dt_test) %>% select(c("Res", "Age","Inhalation_injury",
 
 dataset = dataset %>% mutate(across(where(~all(. %in% c(0, 1))), factor, labels = c(FALSE, TRUE))) %>% mutate_if(is.factor, as.logical) %>% mutate_at(vars("Res"), as.factor)
 
-
 task = TaskClassif$new("shao_test", dataset, target = "Res")
 
 custom = rsmp("custom")
@@ -360,7 +359,78 @@ at_cv_glmnet$train(task)
 
 at_log_reg$predict_newdata(dataset)
 
+####po stack run
+library(mlr3verse)
 
+task = TaskClassif$new("shao_test", dataset, target = "Res")
+
+graph_stack = po("filter", filter = flt("auc"), filter.frac = 0.5) %>>% # filter.frac应该做调参, 还有其它可选filter.nfeat, filter.cutoff, filter.permuted
+   gunion(list(
+   po("learner_cv", lrn("classif.cv_glmnet")),
+   po("learner_cv", lrn("classif.svm")),
+   po("nop"))) %>>%
+   po("featureunion") %>>%
+   lrn("classif.rpart",predict_type = "prob")
+
+learner = as_learner(graph_stack)
+rr = resample(task, learner, rsmp("cv", folds = 5))
+
+rr$score()
+rr$aggregate(msrs("classif.auc"))
+
+
+
+#####################
+
+# create mlr h2o model
+library(mlr)
+
+dat=rbind(dt_train,dt_test)
+
+train=1:nrow(dt_train)
+
+datTrain <- dat[train, ]
+datTest <- dat[-train, ]
+
+task2 <- makeClassifTask(data =  datTrain , target = "Res")
+
+learner <- makeLearner("classif.h2o.deeplearning", predict.type = "prob", 
+                       par.vals = list(reproducible = TRUE,
+                                       seed = 1))
+Mod <- train(learner, task2)
+
+# Test predictions
+pred <- predict(Mod, newdata = datTest)
+# Evaluate performance accuracy & area under curve 
+performance(pred, measures = list(acc, auc)) 
+
+set.seed(1234)
+# Tune epoch parameter
+param_set <- makeParamSet(
+  makeNumericParam("epochs", lower = 1, upper = 10))
+rdesc <- makeResampleDesc("CV", iters = 3L, predict = "both") 
+
+ctrl <- makeTuneControlRandom(maxit = 3)
+
+res <- tuneParams(
+  learner = learner, task = task2, resampling = rdesc, measures = list(auc, acc),
+  par.set = param_set, control = ctrl
+)
+
+resample(learner, task2, cv3, list(auc, acc))
+
+set.seed(1234)
+# plugging the tuned value into model and checking performance again:
+learner <- makeLearner("classif.h2o.deeplearning", predict.type = "prob", 
+                       par.vals = list(epochs = 4.54,
+                                       reproducible = TRUE,
+                                       seed = 1))
+Mod <- train(learner, task2)
+
+# Test predictions
+pred1 <- predict(Mod, newdata = datTest)
+# Evaluate performance accuracy & area under curve 
+performance(pred1, measures = list(acc, auc))
 
 #######################################
 
