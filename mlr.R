@@ -12,12 +12,14 @@ library(tidyverse)
 library(pROC)
 library(ggplot2)
 library(mlr3)
+library(mlr3verse)
 library(mlr3learners)
 library(mlr3tuning)
 library(mlr3fselect)
 library(mlr3viz)
 library(skimr)
 library(DataExplorer)
+
 
 ###useful convert
 # data = final1 %>% mutate_at(vars(one_of("host")), funs( as.factor)) 
@@ -48,20 +50,22 @@ dt_select <- test_datasets %>%
    mutate(HCTdALB = test_datasets$`@1d_hct`/test_datasets$`@1d_ALB`) %>%
    mutate(`@1d_ALB` = cut(`@1d_ALB`, breaks = c(-Inf, 25, Inf), right = FALSE, labels = c("0", "1"))) %>%
    mutate(`24h血糖（mmol/L）` = cut(`24h血糖（mmol/L）`, breaks = c(-Inf, 14, Inf), right = FALSE, labels = c("0", "1"))) %>%
-   mutate(`基础疾病(0无1高血压2糖尿病3两者都有4其他)`= ifelse(`基础疾病(0无1高血压2糖尿病3两者都有4其他)`==0, "0", "1")) %>%  
-   select(-c("病案号","姓名","体重（kg","身高m","天数","中性粒细胞","吸入性损伤...46"))   %>% rename_with(~str_remove(., '[@）]+')) %>% 
-   mutate_if(is.character, as.factor) 
+   mutate(Hypertension = ifelse(`基础疾病(0无1高血压2糖尿病3两者都有4其他)`==1, "1", "0")) %>% 
+   mutate(Diabetes = ifelse(`基础疾病(0无1高血压2糖尿病3两者都有4其他)`==2, "1", "0")) %>% 
+   mutate(Hypertension = case_when(`基础疾病(0无1高血压2糖尿病3两者都有4其他)`==3 ~ "1",TRUE ~ Hypertension)) %>% 
+   mutate(Diabetes = case_when(`基础疾病(0无1高血压2糖尿病3两者都有4其他)`==3 ~ "1",TRUE ~Diabetes)) %>%
+   mutate(Others_disease = ifelse(`基础疾病(0无1高血压2糖尿病3两者都有4其他)`==4, "1", "0")) %>% 
+   select(-c("病案号","姓名","体重（kg","身高m","天数","中性粒细胞","吸入性损伤...46"))   %>% 
+   rename_with(~str_remove(., '[@）]+')) %>% 
+   mutate_if(is.character, as.factor) %>%  
+   rename("耐受"="主要结局：耐受0，不耐受1") %>% rename("吸入性损伤"="吸入性损伤...12") 
    
 colnames(dt_select) <- gsub('[(（].*','',colnames(dt_select))
-colnames(dt_select) [25] = "耐受"
-#colnames(dt_select) [40] = "吸入性损伤"
-colnames(dt_select) [8] = "吸入性损伤"
-
 
 dt_train = dt_select  %>% 
-    select(c("耐受","年龄","性别","BMI","吸入性损伤","天数","基础疾病","24h血糖","TBSA","烧伤指数","III度","脓毒症","HCTdALB","1d_ALB","1dHB","1d_plt","1d_淋巴细胞","1d_TP","1d_TBIL","1d_DBIL","1d_CRE","1d_BUN","1d_PA","1d_LAC"))
+    select(c("耐受","年龄","性别","BMI","吸入性损伤","天数","24h血糖","TBSA","烧伤指数","III度","脓毒症","HCTdALB","1d_ALB","1dHB","1d_plt","1d_淋巴细胞","1d_TP","1d_TBIL","1d_DBIL","1d_CRE","1d_BUN","1d_PA","1d_LAC","Hypertension","Diabetes","Others_disease"))
 
-colnames(dt_train)=c("Res","Age","Sex","Bmi","Inhalation_injury","Day","Underlying_disease","Glu_24h","TBSA","Burn_index","III_index","Sepsis","HCTdALB","ALB","HB","Plt","Lymphocyte","TP","TBIL","DBIL","CRE","BUN","PA","LAC")
+colnames(dt_train)=c("Res","Age","Sex","Bmi","Inhalation_injury","Day","Glu_24h","TBSA","Burn_index","III_index","Sepsis","HCTdALB","ALB","HB","Plt","Lymphocyte","TP","TBIL","DBIL","CRE","BUN","PA","LAC","Hypertension","Diabetes","Others_disease")
 
 validate_datasets <- read_excel("validate_datasets.xlsx")
 
@@ -72,61 +76,123 @@ dt_test = validate_datasets %>%
    mutate(HCTdALB = validate_datasets$`@1d_hct`/validate_datasets$`@1d_ALB`) %>% 
    mutate(`@1d_ALB` = cut(`@1d_ALB`, breaks = c(-Inf, 25, Inf), right = FALSE, labels = c("0", "1"))) %>%
    mutate(`24h血糖` = cut(`24h血糖`, breaks = c(-Inf, 14, Inf), right = FALSE, labels = c("0", "1"))) %>%
-   mutate(`基础疾病(0无1高血压2糖尿病3两者都有4肿瘤5其他)`= ifelse(`基础疾病(0无1高血压2糖尿病3两者都有4肿瘤5其他)`==0, "0", "1")) %>%
+   # mutate(`基础疾病(0无1高血压2糖尿病3两者都有4肿瘤5其他)`= ifelse(`基础疾病(0无1高血压2糖尿病3两者都有4肿瘤5其他)`==0, "0", "1")) %>%
+   mutate(Hypertension = ifelse(`基础疾病(0无1高血压2糖尿病3两者都有4肿瘤5其他)`==1, "1", "0")) %>% 
+   mutate(Diabetes = ifelse(`基础疾病(0无1高血压2糖尿病3两者都有4肿瘤5其他)`==2, "1", "0")) %>% 
+   mutate(Hypertension = case_when(`基础疾病(0无1高血压2糖尿病3两者都有4肿瘤5其他)`==3 ~ "1",TRUE ~ Hypertension)) %>% 
+   mutate(Diabetes = case_when(`基础疾病(0无1高血压2糖尿病3两者都有4肿瘤5其他)`==3 ~ "1",TRUE ~Diabetes)) %>%
+   mutate(Others_disease = ifelse(`基础疾病(0无1高血压2糖尿病3两者都有4肿瘤5其他)`==5, "1", "0")) %>% 
+   mutate(Others_disease = case_when(`基础疾病(0无1高血压2糖尿病3两者都有4肿瘤5其他)`==4 ~ "1",TRUE ~Others_disease))%>%
    mutate(天数 = cut(天数, breaks = c(-Inf, 4, Inf), right = FALSE, labels = c("0", "1"))) %>%
-   select(c("主要结局：耐受0，不耐受1","年龄","性别","BMI","吸入性损伤","天数","基础疾病(0无1高血压2糖尿病3两者都有4肿瘤5其他)","24h血糖","TBSA","烧伤指数","III度","脓毒症（无0有1）","HCTdALB","@1d_ALB","@1dHB","@1d_plt","@1d_淋巴细胞","@1d_TP","@1d_TBIL","@1d_DBIL","@1d_CRE","@1d_BUN","@1d_PA","@1d_LAC")) %>% 
+   select(c("主要结局：耐受0，不耐受1","年龄","性别","BMI","吸入性损伤","天数","24h血糖","TBSA","烧伤指数","III度","脓毒症（无0有1）","HCTdALB","@1d_ALB","@1dHB","@1d_plt","@1d_淋巴细胞","@1d_TP","@1d_TBIL","@1d_DBIL","@1d_CRE","@1d_BUN","@1d_PA","@1d_LAC","Hypertension","Diabetes","Others_disease")) %>% 
    mutate_if(is.character, as.factor) 
-colnames(dt_test)=c("Res","Age","Sex","Bmi","Inhalation_injury","Day","Underlying_disease","Glu_24h","TBSA","Burn_index","III_index","Sepsis","HCTdALB","ALB","HB","Plt","Lymphocyte","TP","TBIL","DBIL","CRE","BUN","PA","LAC")
+colnames(dt_test)=c("Res","Age","Sex","Bmi","Inhalation_injury","Day","Glu_24h","TBSA","Burn_index","III_index","Sepsis","HCTdALB","ALB","HB","Plt","Lymphocyte","TP","TBIL","DBIL","CRE","BUN","PA","LAC","Hypertension","Diabetes","Others_disease")
 
 skimr::skim(dt_test)
 
 dataset = rbind(dt_train,dt_test) # %>% select(c("Res", "Age","Inhalation_injury","Burn_index","HCTdALB","Plt","TBIL"))
 
-dataset = dataset %>% mutate(across(where(~all(. %in% c(0, 1))), factor, labels = c(FALSE, TRUE))) %>% mutate_if(is.factor, as.logical) %>% mutate_at(vars("Res"), as.factor)
 
 
-###################pre- process
+
+###################data report separate
 
 
 plot_str(dataset)
-introduce(dataset)
+
+plot_missing(dataset)
+# dataset <- drop_columns(dataset, "total missing")
+plot_bar(dataset,nrow = 4L, ncol = 4L)
+plot_histogram(dataset)
+#select_if(negate(is.numeric))
+qq_data <- dataset %>% select_if(is.numeric)
+plot_qq(qq_data, sampled_rows = 1000L,nrow = 4L, ncol = 4L)
+
+log_qq_data <- update_columns(qq_data, 1:ncol(qq_data), function(x) log(x + 1))
+
+plot_qq(log_qq_data, sampled_rows = 1000L)
+
+plot_qq(qq_data, by = "TBSA", sampled_rows = 1000L,nrow = 4L, ncol = 4L)
+
+plot_correlation(na.omit(dataset), maxcat = 5L)
+
+plot_boxplot(dataset, by = "Res",nrow = 4L, ncol = 4L)
+
+###########data report 
+create_report(dataset, y = "Res")
+
+
+##############
+raw_test = TaskClassif$new("raw_test", dataset, target = "Res")
+
+factor_pipeline = po("encode", method = "treatment", affect_columns = selector_type("factor"))
+
+lrn_xgb = lrn("classif.xgboost", nrounds = 100)
+
+factor_pipeline$train(list(raw_test))[[1]]$data()
 
 
 
 
 
+
+
+#########0,1 to logical
+# dataset = dataset %>% mutate(across(where(~all(. %in% c(0, 1))), factor, labels = c(FALSE, TRUE))) %>% mutate_if(is.factor, as.logical) %>% mutate_at(vars("Res"), as.factor)
 
 task = TaskClassif$new("shao_test", dataset, target = "Res")
 
-custom = rsmp("custom")
-train_sets = list(1:nrow(dt_train), (nrow(dt_train)+1):(nrow(dt_train)+nrow(dt_test)))
-test_sets = list((nrow(dt_train)+1):(nrow(dt_train)+nrow(dt_test)), 1:nrow(dt_train))
-custom$instantiate(task, train_sets, test_sets)
+factor_pipeline = po("encode", method = "treatment", affect_columns = selector_type("factor")) %>>% po("imputeoor") 
+factor_pipeline$train(task)[[1]]$data()
+
+task2 = factor_pipeline$train(task)[[1]]
+
+###########
+#A Resampling is instantiated for a task with a different number of observations
+task2$set_col_roles(c("Age","Bmi"), "stratum")
+table(task2$data(cols = c("Age","Bmi")))
+
+rsmp_cv10 = rsmp("cv", folds = 10)
+rsmp_cv10$instantiate(task2)
+
+fold1 = prop.table(table(task2$data(rows = rsmp_cv10$test_set(1),cols = "Bmi")))
+fold2 = prop.table(table(task2$data(rows = rsmp_cv10$test_set(2),cols = "Bmi")))
+rbind("Fold 1" = fold1, "Fold 2" = fold2)
+
+
+############
+#custom = rsmp("custom")
+#train_sets = list(1:nrow(dt_train), (nrow(dt_train)+1):(nrow(dt_train)+nrow(dt_test)))
+#test_sets = list((nrow(dt_train)+1):(nrow(dt_train)+nrow(dt_test)), 1:nrow(dt_train))
+#custom$instantiate(task2, train_sets, test_sets)
+
+rsmp_tuner =  rsmp("cv", folds = 10)
 
 custom1 = rsmp("custom")
 train_sets = list(1:nrow(dt_train))
 test_sets = list((nrow(dt_train)+1):(nrow(dt_train)+nrow(dt_test)))
-custom1$instantiate(task, train_sets, test_sets)
+custom1$instantiate(task2, train_sets, test_sets)
 
 #task = TaskClassif$new("shao_test", dt_train, target = "Res")
 
-at_featureless = auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.featureless", predict_type = "prob"),resampling = rsmp("cv", folds = 3), measure = msr("classif.auc"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
-at_log_reg = auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.log_reg", predict_type = "prob"),resampling = rsmp("cv", folds = 3), measure = msr("classif.auc"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
-at_cv_glmnet = auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.cv_glmnet", predict_type = "prob"),resampling = rsmp("cv", folds = 3), measure = msr("classif.auc"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
-at_lda= auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.lda", predict_type = "prob"),resampling = rsmp("cv", folds = 3), measure = msr("classif.auc"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
-at_naive_bayes = auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.naive_bayes", predict_type = "prob"),resampling = rsmp("cv", folds = 3), measure = msr("classif.auc"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
-at_xgboost = auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.xgboost", predict_type = "prob"),resampling = rsmp("cv", folds = 3), measure = msr("classif.auc"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
-at_ranger = auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.ranger", predict_type = "prob"),resampling = rsmp("cv", folds = 3), measure = msr("classif.auc"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
-at_svm = auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.svm", predict_type = "prob"),resampling = rsmp("cv", folds = 5), measure = msr("classif.auc"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
-at_rpart = auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.rpart", predict_type = "prob"),resampling = rsmp("cv", folds = 3), measure = msr("classif.auc"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
+at_featureless = auto_tuner(tuner=tnr("random_search"), learner =  lrn("classif.featureless", predict_type = "prob"),resampling = rsmp_tuner, measure = msr("classif.auc", average = "micro"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
+at_log_reg = auto_tuner(tuner=tnr("random_search"), learner =  lrn("classif.log_reg", predict_type = "prob"),resampling = rsmp_tuner, measure = msr("classif.auc", average = "micro"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
+at_cv_glmnet = auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.cv_glmnet", predict_type = "prob"),resampling = rsmp_tuner, measure = msr("classif.auc", average = "micro"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
+at_lda= auto_tuner(tuner=tnr("random_search"), learner =  lrn("classif.lda", predict_type = "prob"),resampling = rsmp_tuner, measure = msr("classif.auc", average = "micro"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
+at_naive_bayes = auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.naive_bayes", predict_type = "prob"),resampling = rsmp_tuner, measure = msr("classif.auc", average = "micro"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
+at_xgboost = auto_tuner(tuner=tnr("random_search"), learner =  lrn("classif.xgboost", predict_type = "prob"),resampling = rsmp_tuner, measure = msr("classif.auc", average = "micro"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
+at_ranger = auto_tuner(tuner=tnr("random_search"), learner =  lrn("classif.ranger", predict_type = "prob"),resampling = rsmp_tuner, measure = msr("classif.auc", average = "micro"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
+at_svm = auto_tuner(tuner=tnr("random_search"), learner =  lrn("classif.svm", predict_type = "prob"),resampling = rsmp_tuner, measure = msr("classif.auc", average = "micro"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
+at_rpart = auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.rpart", predict_type = "prob"),resampling = rsmp_tuner, measure = msr("classif.auc", average = "micro"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
 
 auto <- auto_fselector(
   fselector = fs("random_search"),
   learner = lrn("classif.log_reg", predict_type = "prob"),
-  resampling = rsmp("holdout"),
-  measure = msr("classif.auc"),
+  resampling = rsmp("loo"),
+  measure = msr("classif.auc", average = "micro"),
   terminator = trm("evals", n_evals = 10)
 )
+
 
 learners <- c(auto,at_featureless,at_log_reg,at_cv_glmnet, at_lda,at_naive_bayes,at_xgboost,at_ranger,at_svm,at_rpart)
 # learners = po("encode") %>>% learners
@@ -134,12 +200,53 @@ measures <- msrs(c("classif.auc", "classif.bacc", "classif.bbrier"))
 
 #Benchmarking
 set.seed(372)
-design = benchmark_grid(tasks =task, learners = learners, resamplings = rsmp("cv", folds = 5) )
+design = benchmark_grid(tasks =task2, learners = learners, resamplings = custom1)
 bmr = benchmark(design, store_models = TRUE)
-results <- bmr$aggregate(measures)
+bmr$aggregate(measures)
+
+########
+at_cv_glmnet$train(task2, train_sets[[1]])
+prediction = at_cv_glmnet$predict(task2, test_sets[[1]])
+
+prediction$confusion
+prediction$score(msr("classif.auc"))
+
+###########res unbalance
+new_thresh = proportions(table(tsk_zoo$truth(splits$train)))
+prediction$set_threshold(new_thresh)
+
+
+#####weight
+df = task2$data()
+df$weights = ifelse(df$Age == 1, 2, 1)
+
+
+# create new task and role
+task2_weighted = as_task_classif(df, target = "Res")
+task2_weighted$set_col_roles("weights", roles = "weight")
+
+# compare weighted and unweighted predictions
+
+prediction_weighted = at_cv_glmnet$train(task2_weighted, train_sets[[1]])
+prediction_weighted = at_cv_glmnet$predict(task2, test_sets[[1]])
+prediction_weighted$score(msr("classif.auc"))
+
+
+
+
+
+
+results <- bmr$aggregate(measures, average = "micro")
 print(results)
 autoplot(bmr, measure = msr("classif.auc"))
 autoplot(bmr, type = "roc")
+
+########robust test
+at_cv_glmnet_ro = auto_tuner(tuner=tnr("random_search"), learner = as_learner(ppl("robustify") %>>% lrn("classif.cv_glmnet", predict_type = "prob")),resampling = rsmp("cv", folds = 3), measure = msr("classif.auc"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
+
+design = benchmark_grid(tasks =task2, learners = c(at_cv_glmnet,at_cv_glmnet_ro), resamplings = rsmp("cv", folds = 5) )
+bmr_new = benchmark(design, store_models = TRUE)
+bmr$combine(bmr_new)
 
 #########traning and test new data
 at_cv_glmnet$train(task)
@@ -307,7 +414,7 @@ colnames(importance) = c("Feature", "Importance")
 ggplot(data=importance,aes(x = reorder(Feature, Importance), y = Importance)) + geom_col() + coord_flip() + xlab("")
 
 
-lrn_ranger = lrn("classif.ranger", predict_type = "prob")
+lrn_ranger = lrn("classif.ranger", predict_type = "prob") 
 splits = mlr3::partition(task, ratio = 0.8)
 
 lrn_ranger$train(task, splits$train)

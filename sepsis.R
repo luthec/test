@@ -4,9 +4,42 @@ library(xlsx)
 library(readxl)
 library(openxlsx)
 
-CHN_097_9730 <- read_csv("CHN-097_9730.csv")
-CHN_097_9732 <- read_csv("CHN-097_9732.csv")
-CHN_097_9728 <- read_csv("CHN-097_9728.csv")
+####EDC
+data_join <- list.files(path = "./EDC_pro/", # Identify all CSV files
+                       pattern = "*.csv", full.names = TRUE) %>% 
+  lapply(read_csv) %>%                              # Store all files in list
+  reduce(full_join, by = "Subject")                      # Full-join data sets into one data set 
+
+###instrument
+all_test <- read_csv("all_test.csv")
+Patient_2023_07_04_18h09m_IVD <- read_csv("Patient_2023-07-04_18h09m_IVD.csv")
+
+
+mdw_filter = all_test %>% 
+select(RDFilename,matches("MDW")) %>% 
+filter(Diff_MDW_Flag_NonNumericFlag=="NULL"& Diff_MDW_SingleCharParameterFlag=="NULL") %>%
+separate(RDFilename, into = c('Time','标本编号'), sep = '_') %>%
+left_join(Patient_2023_07_04_18h09m_IVD, by = "标本编号") %>%
+select(Time,标本编号,matches("MDW"))
+
+
+mdw_filter2 = all_test %>% 
+select(RDFilename,matches("MDW")) %>% 
+filter(Diff_MDW_Flag_NonNumericFlag=="NULL"& Diff_MDW_SingleCharParameterFlag=="NULL") %>%
+separate(RDFilename, into = c('Time','标本编号'), sep = '_') %>%
+select(Time,标本编号,"Diff_MDW_Value")
+
+
+
+write.xlsx(mdw_filter2 ,  "Instrument_test2.xlsx",  col.names = TRUE)
+
+
+res_t = data_join %>% select( Subject,DXHSMP, CBCADAT) %>% rename("标本编号"="DXHSMP") %>%
+       # unite(标本编号, c("StudyEnvSiteNumber", "ENROLL_NUM"),sep = "") %>% 
+       right_join(Patient_2023_07_04_18h09m_CPD, by = "标本编号") %>% 
+       select(Subject,标本编号,CBCADAT,分析日期,分析时间)
+
+write.xlsx(res_t,  "Sepsis_CBCADAT.xlsx",  col.names = TRUE)
 
 
 Sepsis_MDW_raw <- read_excel("SepsisMDW.xlsx", skip = 1)
