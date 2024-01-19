@@ -50,11 +50,12 @@ dt_select <- test_datasets %>%
    mutate(HCTdALB = test_datasets$`@1d_hct`/test_datasets$`@1d_ALB`) %>%
    mutate(`@1d_ALB` = cut(`@1d_ALB`, breaks = c(-Inf, 25, Inf), right = FALSE, labels = c("0", "1"))) %>%
    mutate(`24h血糖（mmol/L）` = cut(`24h血糖（mmol/L）`, breaks = c(-Inf, 14, Inf), right = FALSE, labels = c("0", "1"))) %>%
-   mutate(Hypertension = ifelse(`基础疾病(0无1高血压2糖尿病3两者都有4其他)`==1, "1", "0")) %>% 
-   mutate(Diabetes = ifelse(`基础疾病(0无1高血压2糖尿病3两者都有4其他)`==2, "1", "0")) %>% 
-   mutate(Hypertension = case_when(`基础疾病(0无1高血压2糖尿病3两者都有4其他)`==3 ~ "1",TRUE ~ Hypertension)) %>% 
-   mutate(Diabetes = case_when(`基础疾病(0无1高血压2糖尿病3两者都有4其他)`==3 ~ "1",TRUE ~Diabetes)) %>%
-   mutate(Others_disease = ifelse(`基础疾病(0无1高血压2糖尿病3两者都有4其他)`==4, "1", "0")) %>% 
+   #mutate(Hypertension = ifelse(`基础疾病(0无1高血压2糖尿病3两者都有4其他)`==1, "1", "0")) %>% 
+   #mutate(Diabetes = ifelse(`基础疾病(0无1高血压2糖尿病3两者都有4其他)`==2, "1", "0")) %>% 
+   #mutate(Hypertension = case_when(`基础疾病(0无1高血压2糖尿病3两者都有4其他)`==3 ~ "1",TRUE ~ Hypertension)) %>% 
+   #mutate(Diabetes = case_when(`基础疾病(0无1高血压2糖尿病3两者都有4其他)`==3 ~ "1",TRUE ~Diabetes)) %>%
+   #mutate(Others_disease = ifelse(`基础疾病(0无1高血压2糖尿病3两者都有4其他)`==4, "1", "0")) %>% 
+   mutate(`基础疾病(0无1高血压2糖尿病3两者都有4其他)`= ifelse(`基础疾病(0无1高血压2糖尿病3两者都有4其他)`==0, "0", "1")) %>% rename("基础疾病"="基础疾病(0无1高血压2糖尿病3两者都有4其他)") %>% 
    select(-c("病案号","姓名","体重（kg","身高m","天数","中性粒细胞","吸入性损伤...46"))   %>% 
    rename_with(~str_remove(., '[@）]+')) %>% 
    mutate_if(is.character, as.factor) %>%  
@@ -63,9 +64,9 @@ dt_select <- test_datasets %>%
 colnames(dt_select) <- gsub('[(（].*','',colnames(dt_select))
 
 dt_train = dt_select  %>% 
-    select(c("耐受","年龄","性别","BMI","吸入性损伤","天数","24h血糖","TBSA","烧伤指数","III度","脓毒症","HCTdALB","1d_ALB","1dHB","1d_plt","1d_淋巴细胞","1d_TP","1d_TBIL","1d_DBIL","1d_CRE","1d_BUN","1d_PA","1d_LAC","Hypertension","Diabetes","Others_disease"))
+    select(c("耐受","年龄","性别","BMI","吸入性损伤","天数","24h血糖","TBSA","烧伤指数","III度","脓毒症","HCTdALB","1d_ALB","1dHB","1d_plt","1d_淋巴细胞","1d_TP","1d_TBIL","1d_DBIL","1d_CRE","1d_BUN","1d_PA","1d_LAC","基础疾病"))
 
-colnames(dt_train)=c("Res","Age","Sex","Bmi","Inhalation_injury","Day","Glu_24h","TBSA","Burn_index","III_index","Sepsis","HCTdALB","ALB","HB","Plt","Lymphocyte","TP","TBIL","DBIL","CRE","BUN","PA","LAC","Hypertension","Diabetes","Others_disease")
+colnames(dt_train)=c("Res","Age","Sex","Bmi","Inhalation_injury","Day","Glu_24h","TBSA","Burn_index","III_index","Sepsis","HCTdALB","ALB","HB","Plt","Lymphocyte","TP","TBIL","DBIL","CRE","BUN","PA","LAC","Disease")
 
 validate_datasets <- read_excel("validate_datasets.xlsx")
 
@@ -76,17 +77,17 @@ dt_test = validate_datasets %>%
    mutate(HCTdALB = validate_datasets$`@1d_hct`/validate_datasets$`@1d_ALB`) %>% 
    mutate(`@1d_ALB` = cut(`@1d_ALB`, breaks = c(-Inf, 25, Inf), right = FALSE, labels = c("0", "1"))) %>%
    mutate(`24h血糖` = cut(`24h血糖`, breaks = c(-Inf, 14, Inf), right = FALSE, labels = c("0", "1"))) %>%
-   # mutate(`基础疾病(0无1高血压2糖尿病3两者都有4肿瘤5其他)`= ifelse(`基础疾病(0无1高血压2糖尿病3两者都有4肿瘤5其他)`==0, "0", "1")) %>%
-   mutate(Hypertension = ifelse(`基础疾病(0无1高血压2糖尿病3两者都有4肿瘤5其他)`==1, "1", "0")) %>% 
-   mutate(Diabetes = ifelse(`基础疾病(0无1高血压2糖尿病3两者都有4肿瘤5其他)`==2, "1", "0")) %>% 
-   mutate(Hypertension = case_when(`基础疾病(0无1高血压2糖尿病3两者都有4肿瘤5其他)`==3 ~ "1",TRUE ~ Hypertension)) %>% 
-   mutate(Diabetes = case_when(`基础疾病(0无1高血压2糖尿病3两者都有4肿瘤5其他)`==3 ~ "1",TRUE ~Diabetes)) %>%
-   mutate(Others_disease = ifelse(`基础疾病(0无1高血压2糖尿病3两者都有4肿瘤5其他)`==5, "1", "0")) %>% 
-   mutate(Others_disease = case_when(`基础疾病(0无1高血压2糖尿病3两者都有4肿瘤5其他)`==4 ~ "1",TRUE ~Others_disease))%>%
+   mutate(`基础疾病(0无1高血压2糖尿病3两者都有4肿瘤5其他)`= ifelse(`基础疾病(0无1高血压2糖尿病3两者都有4肿瘤5其他)`==0, "0", "1")) %>% rename("基础疾病"="基础疾病(0无1高血压2糖尿病3两者都有4肿瘤5其他)") %>% 
+   #mutate(Hypertension = ifelse(`基础疾病(0无1高血压2糖尿病3两者都有4肿瘤5其他)`==1, "1", "0")) %>% 
+   #mutate(Diabetes = ifelse(`基础疾病(0无1高血压2糖尿病3两者都有4肿瘤5其他)`==2, "1", "0")) %>% 
+   #mutate(Hypertension = case_when(`基础疾病(0无1高血压2糖尿病3两者都有4肿瘤5其他)`==3 ~ "1",TRUE ~ Hypertension)) %>% 
+   #mutate(Diabetes = case_when(`基础疾病(0无1高血压2糖尿病3两者都有4肿瘤5其他)`==3 ~ "1",TRUE ~Diabetes)) %>%
+   #mutate(Others_disease = ifelse(`基础疾病(0无1高血压2糖尿病3两者都有4肿瘤5其他)`==5, "1", "0")) %>% 
+   #mutate(Others_disease = case_when(`基础疾病(0无1高血压2糖尿病3两者都有4肿瘤5其他)`==4 ~ "1",TRUE ~Others_disease))%>%
    mutate(天数 = cut(天数, breaks = c(-Inf, 4, Inf), right = FALSE, labels = c("0", "1"))) %>%
-   select(c("主要结局：耐受0，不耐受1","年龄","性别","BMI","吸入性损伤","天数","24h血糖","TBSA","烧伤指数","III度","脓毒症（无0有1）","HCTdALB","@1d_ALB","@1dHB","@1d_plt","@1d_淋巴细胞","@1d_TP","@1d_TBIL","@1d_DBIL","@1d_CRE","@1d_BUN","@1d_PA","@1d_LAC","Hypertension","Diabetes","Others_disease")) %>% 
+   select(c("主要结局：耐受0，不耐受1","年龄","性别","BMI","吸入性损伤","天数","24h血糖","TBSA","烧伤指数","III度","脓毒症（无0有1）","HCTdALB","@1d_ALB","@1dHB","@1d_plt","@1d_淋巴细胞","@1d_TP","@1d_TBIL","@1d_DBIL","@1d_CRE","@1d_BUN","@1d_PA","@1d_LAC","基础疾病")) %>% 
    mutate_if(is.character, as.factor) 
-colnames(dt_test)=c("Res","Age","Sex","Bmi","Inhalation_injury","Day","Glu_24h","TBSA","Burn_index","III_index","Sepsis","HCTdALB","ALB","HB","Plt","Lymphocyte","TP","TBIL","DBIL","CRE","BUN","PA","LAC","Hypertension","Diabetes","Others_disease")
+colnames(dt_test)=c("Res","Age","Sex","Bmi","Inhalation_injury","Day","Glu_24h","TBSA","Burn_index","III_index","Sepsis","HCTdALB","ALB","HB","Plt","Lymphocyte","TP","TBIL","DBIL","CRE","BUN","PA","LAC","Disease")
 
 skimr::skim(dt_test)
 
@@ -118,8 +119,7 @@ plot_correlation(na.omit(dataset), maxcat = 5L)
 
 plot_boxplot(dataset, by = "Res",nrow = 4L, ncol = 4L)
 
-###########data report 
-create_report(dataset, y = "Res")
+
 
 
 ##############
@@ -133,13 +133,17 @@ factor_pipeline$train(list(raw_test))[[1]]$data()
 
 
 
-
-
-
-
 #########0,1 to logical
 # dataset = dataset %>% mutate(across(where(~all(. %in% c(0, 1))), factor, labels = c(FALSE, TRUE))) %>% mutate_if(is.factor, as.logical) %>% mutate_at(vars("Res"), as.factor)
 
+###########data report 
+create_report(dataset, y = "Res")
+
+# log_dataset <- dataset %>% mutate_if( is.numeric, ~log(.+0.000000000001))
+
+create_report(log_dataset, y = "Res")
+
+#  data pre-process
 task = TaskClassif$new("shao_test", dataset, target = "Res")
 
 factor_pipeline = po("encode", method = "treatment", affect_columns = selector_type("factor")) %>>% po("imputeoor") 
@@ -147,9 +151,10 @@ factor_pipeline$train(task)[[1]]$data()
 
 task2 = factor_pipeline$train(task)[[1]]
 
-###########
+
+########### 
 #A Resampling is instantiated for a task with a different number of observations
-task2$set_col_roles(c("Age","Bmi"), "stratum")
+task2$set_col_roles("Age", "stratum")
 table(task2$data(cols = c("Age","Bmi")))
 
 rsmp_cv10 = rsmp("cv", folds = 10)
@@ -185,16 +190,30 @@ at_ranger = auto_tuner(tuner=tnr("random_search"), learner =  lrn("classif.range
 at_svm = auto_tuner(tuner=tnr("random_search"), learner =  lrn("classif.svm", predict_type = "prob"),resampling = rsmp_tuner, measure = msr("classif.auc", average = "micro"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
 at_rpart = auto_tuner(tuner=tnr("random_search"), learner = lrn("classif.rpart", predict_type = "prob"),resampling = rsmp_tuner, measure = msr("classif.auc", average = "micro"),term_evals = 20,store_tuning_instance = TRUE,store_models = TRUE)
 
+#Augment the base learner with a fallback which gets fitted if the base learner fails. Here is fallback to a simple logistic regression:
+learnerglm = lrn("classif.glmnet", predict_type = "prob")
+learnerglm$encapsulate = c(train = "evaluate", predict = "evaluate")
+learnerglm$fallback = lrn("classif.log_reg", predict_type = "prob")
+
+
 auto <- auto_fselector(
   fselector = fs("random_search"),
-  learner = lrn("classif.log_reg", predict_type = "prob"),
+  learner = learnerglm,
+  resampling = rsmp_tuner ,
+  measure = msr("classif.auc", average = "micro"),
+  terminator = trm("evals", n_evals = 10)
+)
+
+auto2 <- auto_fselector(
+  fselector = fs("random_search"),
+  learner = lrn("classif.ranger", predict_type = "prob"),
   resampling = rsmp("loo"),
   measure = msr("classif.auc", average = "micro"),
   terminator = trm("evals", n_evals = 10)
 )
 
 
-learners <- c(auto,at_featureless,at_log_reg,at_cv_glmnet, at_lda,at_naive_bayes,at_xgboost,at_ranger,at_svm,at_rpart)
+learners <- c(auto,auto2,at_featureless,at_log_reg,at_cv_glmnet, at_lda,at_naive_bayes,at_xgboost,at_ranger,at_svm,at_rpart)
 # learners = po("encode") %>>% learners
 measures <- msrs(c("classif.auc", "classif.bacc", "classif.bbrier"))
 

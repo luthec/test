@@ -11,59 +11,48 @@ data_join <- list.files(path = "./EDC_pro/", # Identify all CSV files
   reduce(full_join, by = "Subject")                      # Full-join data sets into one data set 
 
 ###instrument
-all_test <- read_csv("all_test.csv")
-Patient_2023_07_04_18h09m_IVD <- read_csv("Patient_2023-07-04_18h09m_IVD.csv")
+ins <- read_csv("Interim1_instruments.csv")
 
-
-mdw_filter = all_test %>% 
+mdw_filter = ins %>% 
 select(RDFilename,matches("MDW")) %>% 
 filter(Diff_MDW_Flag_NonNumericFlag=="NULL"& Diff_MDW_SingleCharParameterFlag=="NULL") %>%
-separate(RDFilename, into = c('Time','标本编号'), sep = '_') %>%
-left_join(Patient_2023_07_04_18h09m_IVD, by = "标本编号") %>%
-select(Time,标本编号,matches("MDW"))
+separate(RDFilename, into = c('Time','标本编号'), sep = '_') 
+# left_join(Patient_2023_07_04_18h09m_IVD, by = "标本编号") %>%
 
 
-mdw_filter2 = all_test %>% 
-select(RDFilename,matches("MDW")) %>% 
-filter(Diff_MDW_Flag_NonNumericFlag=="NULL"& Diff_MDW_SingleCharParameterFlag=="NULL") %>%
-separate(RDFilename, into = c('Time','标本编号'), sep = '_') %>%
-select(Time,标本编号,"Diff_MDW_Value")
+###clinical label
+
+label <- read_excel("Interim_label1.xlsx", skip = 1)
+
+label1 = label[!is.na(label[,2]),1:2]
+colnames(label1)=c("Subject","Label")
+
+label2 = label[!is.na(label[,4]),3:4]
+colnames(label2)=c("Subject","Label")
+
+label3 = label[!is.na(label[,6]),5:6]
+colnames(label3)=c("Subject","Label")
+
+Sepsis_Label <- rbind( rbind(label1 ,  label2), label3) 
 
 
-
-write.xlsx(mdw_filter2 ,  "Instrument_test2.xlsx",  col.names = TRUE)
-
-
-res_t = data_join %>% select( Subject,DXHSMP, CBCADAT) %>% rename("标本编号"="DXHSMP") %>%
+res_t = data_join %>% rename("标本编号"="DXHSMP") %>%
        # unite(标本编号, c("StudyEnvSiteNumber", "ENROLL_NUM"),sep = "") %>% 
-       right_join(Patient_2023_07_04_18h09m_CPD, by = "标本编号") %>% 
-       select(Subject,标本编号,CBCADAT,分析日期,分析时间)
-
-write.xlsx(res_t,  "Sepsis_CBCADAT.xlsx",  col.names = TRUE)
+       right_join(mdw_filter, by = "标本编号") %>% 
+       left_join(Sepsis_Label, by = "Subject") 
 
 
-Sepsis_MDW_raw <- read_excel("SepsisMDW.xlsx", skip = 1)
+####find page
+res_t%>% select(matches("DataPageName"))
 
-Sepsis_MDW1 = Sepsis_MDW_raw[!is.na(Sepsis_MDW_raw[,2]),1:2]
-colnames(Sepsis_MDW1)=c("Subject","MDW")
+###generate final table
+res_t$Duplicate <- duplicated(res_t$Subject)
+res = res_t %>% drop_na(Subject) %>% 
+      mutate(CBCADAT=format(strptime(CBCADAT, "%d/%b/%Y %H:%M"),format='%Y-%m-%d %H:%M')) %>% 
+      mutate(Time=format(as_datetime(Time),format='%Y-%m-%d %H:%M')) %>% 
+      mutate(Time_Check = ifelse(CBCADAT==Time, "Yes", "No")) %>%
+      select(Subject,标本编号,Duplicate,Time_Check,CBCADAT,Time,ENROLLYN,Label,matches("Site")[1],Diff_MDW_Value, DataPageName.x.x, SFDIAGA.x, FSDIAGARB.x,DataPageName.y.y, SFDIAGA.y, FSDIAGARB.y,DataPageName.y,SFDIAGA, FSDIAGARB) 
 
-Sepsis_MDW2 = Sepsis_MDW_raw[!is.na(Sepsis_MDW_raw[,6]),5:6]
-colnames(Sepsis_MDW2)=c("Subject","MDW")
-
-Sepsis_MDW3 = Sepsis_MDW_raw[!is.na(Sepsis_MDW_raw[,10]),9:10]
-colnames(Sepsis_MDW3)=c("Subject","MDW")
-
-Sepsis_MDW  <- rbind( rbind(Sepsis_MDW1,  Sepsis_MDW2), Sepsis_MDW3) 
-
-
-res1 = full_join(Sepsis_MDW,CHN_097_9730,by="Subject")   
-
-res2 = full_join(res1 ,CHN_097_9732,by="Subject")
-
-res3 = full_join(res2 ,CHN_097_9728,by="Subject")
-
-res = res3[!is.na(res3$project.x),] %>% select( Subject, MDW, Site.x, DataPageName.x, SFDIAGA.x, FSDIAGARB.x,DataPageName.y, SFDIAGA.y, FSDIAGARB.y,DataPageName,SFDIAGA, FSDIAGARB)
-
-colnames(res)=c("Subject", "MDW", "Site","Adjudicator1", "Adjudicator1_Sepsis2", "Adjudicator1_Sepsis3","Adjudicator2", "Adjudicator2_Sepsis2", "Adjudicator2_Sepsis3","Arbitrator", "Arbitrator_Sepsis2", "Arbitrator_Sepsis3")
+colnames(res)=c("Subject", "标本编号","受试者ID号重复","仪器分析时间检查","全血细胞分类计数分析日期时间","仪器真实分析时间","入组","剔除标签","Site","MDW", "Adjudicator1", "Adjudicator1_Sepsis2", "Adjudicator1_Sepsis3","Adjudicator2", "Adjudicator2_Sepsis2", "Adjudicator2_Sepsis3","Arbitrator", "Arbitrator_Sepsis2", "Arbitrator_Sepsis3")
 
 write.xlsx(res,  "Sepsis_STAT.xlsx",  col.names = TRUE)
