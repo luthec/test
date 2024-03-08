@@ -19,6 +19,7 @@ library(mlr3fselect)
 library(mlr3viz)
 library(skimr)
 library(DataExplorer)
+library(easystats)
 
 
 ###useful convert
@@ -93,11 +94,7 @@ skimr::skim(dt_test)
 
 dataset = rbind(dt_train,dt_test) # %>% select(c("Res", "Age","Inhalation_injury","Burn_index","HCTdALB","Plt","TBIL"))
 
-
-
-
 ###################data report separate
-
 
 plot_str(dataset)
 
@@ -141,7 +138,7 @@ create_report(dataset, y = "Res")
 
 # log_dataset <- dataset %>% mutate_if( is.numeric, ~log(.+0.000000000001))
 
-create_report(log_dataset, y = "Res")
+
 
 #  data pre-process
 task = TaskClassif$new("shao_test", dataset, target = "Res")
@@ -222,6 +219,57 @@ set.seed(372)
 design = benchmark_grid(tasks =task2, learners = learners, resamplings = custom1)
 bmr = benchmark(design, store_models = TRUE)
 bmr$aggregate(measures)
+
+####data comparison
+library(caret)
+library(bestNormalize)
+
+##filter outlier
+dataset_f = rbind(dt_train,dt_test) %>% mutate(across(where(is.numeric),~ ifelse(abs(as.numeric(scale(.x))) > 2,NA,.x))) 
+
+create_report(dataset_f, y = "Res")
+ftask = TaskClassif$new("shao_test_filter", dataset_f, target = "Res")
+
+factor_pipeline = po("encode", method = "treatment", affect_columns = selector_type("factor")) %>>% po("imputeoor")
+factor_pipeline$train(ftask)[[1]]$data()
+
+ftask2 = factor_pipeline$train(ftask )[[1]]
+custom1$instantiate(ftask2, train_sets, test_sets)
+
+###best normalization
+dataset_n = rbind(dt_train,dt_test)  %>% mutate(across(where(is.numeric), list( ~ bestNormalize(.x) %>%  predict(.x))),.keep = "unused")
+#dataset %>% mutate_at(vars(TBIL, DBIL,TBSA), list( ~ bestNormalize(.x) %>%  predict(.x)))
+create_report(dataset_n, y = "Res")
+ntask = TaskClassif$new("shao_test_nor", dataset_n, target = "Res")
+
+factor_pipeline = po("encode", method = "treatment", affect_columns = selector_type("factor")) %>>% po("imputeoor")
+factor_pipeline$train(ntask)[[1]]$data()
+
+ntask2 = factor_pipeline$train(ntask )[[1]]
+custom1$instantiate(ntask2, train_sets, test_sets)
+
+design2 = benchmark_grid(tasks =c(task2,ftask2,ntask2), learners = at_cv_glmnet, resamplings = custom1)
+bmr2 = benchmark(design2, store_models = TRUE)
+bmr2$aggregate(measures)
+
+design2_cv = benchmark_grid(tasks =c(task2,ftask2,ntask2), learners = at_cv_glmnet, resamplings =  rsmp("cv", folds = 10))
+bmr2_cv = benchmark(design2_cv, store_models = TRUE)
+bmr2_cv$aggregate(measures)
+
+####training set best nomalization
+train_task = TaskClassif$new("shao_trainingset", dt_train, target = "Res")
+factor_pipeline = po("encode", method = "treatment", affect_columns = selector_type("factor")) %>>% po("imputeoor") 
+train_task2 = factor_pipeline$train(train_task)[[1]]
+
+dt_train_nor = dt_train %>% mutate(across(where(is.numeric), list( ~ bestNormalize(.x) %>%  predict(.x))),.keep = "unused")
+train_task_nor = TaskClassif$new("shao_trainingset", dt_train_nor, target = "Res")
+train_task2_nor = factor_pipeline$train(train_task )[[1]]
+
+set.seed(372)
+design_train = benchmark_grid(tasks =c(train_task2,train_task2_nor), learners = learners, resamplings = rsmp("cv", folds = 10))
+bmr_train = benchmark(design_train , store_models = TRUE)
+bmr_train$aggregate(measures)
+
 
 ########
 at_cv_glmnet$train(task2, train_sets[[1]])

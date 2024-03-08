@@ -21,7 +21,7 @@ data_join <- list.files(path = "./EDC_pro/", # Identify all CSV files
 ins <- read_csv("Interim1_instruments.csv")
 
 mdw_filter = ins %>% 
-select(RDFilename,matches("MDW")) %>% 
+select(RDFilename,matches("MDW"),matches("Ly_All"),matches("Ly_Op_Mean")) %>% 
 filter(Diff_MDW_Flag_NonNumericFlag=="NULL"& Diff_MDW_SingleCharParameterFlag=="NULL") %>%
 separate(RDFilename, into = c('Time','标本编号'), sep = '_') 
 # left_join(Patient_2023_07_04_18h09m_IVD, by = "标本编号") %>%
@@ -60,8 +60,11 @@ res = res_t %>% drop_na(Subject) %>%
       mutate(Time_Check = ifelse(CBCADAT==Time, "Yes", "No")) %>%
       group_by(Subject) %>% mutate(freq=n()) %>%
       filter(!(freq!=1 & CBCADAT!=Time)) %>%
-      select(Subject,标本编号,Time_Check,CBCADAT,Time,Enrollment_ENROLLYN,Label,matches("Site")[1],Diff_MDW_Value, "CEC Adjudicator 1_SFDIAGA","CEC Adjudicator 1_FSDIAGARB","CEC Adjudicator 2_SFDIAGA","CEC Adjudicator 2_FSDIAGARB","CEC Arbitrator_SFDIAGA","CEC Arbitrator_FSDIAGARB") 
+      #compute Lymph_index
+      mutate_at(c('Ly_All_Mean', 'Ly_All_SD', 'Ly_Op_Mean'), as.numeric) %>% mutate(Lymph_index =Ly_All_Mean*Ly_All_SD/Ly_Op_Mean) %>% 
+      mutate(Label2 = ifelse(Lymph_index > 12.9, "可能感染", NA)) %>% 
+      select(Subject,标本编号,Time_Check,CBCADAT,Time,Enrollment_ENROLLYN,Label,Label2,Lymph_index,matches("Site")[1],Diff_MDW_Value,"CEC Adjudicator 1_SFDIAGA","CEC Adjudicator 1_FSDIAGARB","CEC Adjudicator 2_SFDIAGA","CEC Adjudicator 2_FSDIAGARB","CEC Arbitrator_SFDIAGA","CEC Arbitrator_FSDIAGARB") 
 
-colnames(res)=c("Subject", "标本编号","仪器分析时间检查","全血细胞分类计数分析日期时间","仪器真实分析时间","入组","剔除标签","Site","MDW", "Adjudicator1_Sepsis2", "Adjudicator1_Sepsis3","Adjudicator2_Sepsis2", "Adjudicator2_Sepsis3","Arbitrator_Sepsis2", "Arbitrator_Sepsis3")
+colnames(res)=c("Subject", "标本编号","仪器分析时间检查","全血细胞分类计数分析日期时间","仪器真实分析时间","入组","剔除标签","新冠感染","Lymph_index","Site","MDW", "Adjudicator1_Sepsis2", "Adjudicator1_Sepsis3","Adjudicator2_Sepsis2", "Adjudicator2_Sepsis3","Arbitrator_Sepsis2", "Arbitrator_Sepsis3")
 
-write.xlsx(res,  "Sepsis_STAT.xlsx",  colNames = TRUE)
+write.xlsx(res,  "Sepsis_STAT_Covid.xlsx",  colNames = TRUE)
