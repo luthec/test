@@ -88,6 +88,10 @@ res2 = res %>% filter(is.na(剔除标签)) %>%
 
 my_comparisons <- list( c("Infection without sepsis", "Sepsis"), c("Infection without sepsis", "SIRS (>= 2 SIRS criteria)"), c("Non-SIRS/non-infection (control case)","Infection without sepsis") )
 
+
+outpdf=paste("Sepsis","_cor.pdf",sep='')
+pdf(outpdf, width = 16, height = 10, family="GB1")
+
 ggplot(data=res2,aes(x=factor(Sepsis2_Sum,level = c("Non-SIRS/non-infection (control case)","SIRS (>= 2 SIRS criteria)", "Infection without sepsis", "Sepsis")),y=Lymph_index)) +
 geom_boxplot()+
 geom_jitter(width = 0.2, alpha = 0.5, color = 'red') +
@@ -101,8 +105,6 @@ geom_jitter(width = 0.2, alpha = 0.5, color = 'red') +
 geom_hline(yintercept = mean(res2$MDW), linetype = 2) +
 stat_compare_means( ref.group = ".all.",method = "wilcox.test", label = "p.signif")
 
-outpdf=paste("Sepsis","_cor.pdf",sep='')
-pdf(outpdf, width = 16, height = 10, family="GB1")
 
 ggplot(res2, aes(x = MDW, y = Lymph_index)) +
   geom_point() +
