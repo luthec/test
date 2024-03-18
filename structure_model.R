@@ -87,3 +87,14 @@ semPaths(LVdata.fit, "std", edge.label.cex = 0.5, curvePivot = TRUE,intercepts =
 semPaths(LVdata.fit, as.expression = c("nodes", "edges"), sizeMan = 3, sizeInt = 1, 
     sizeLat = 6, label.prop = 0.5, curve = 0.5,  groups = "latents", 
     intercepts = FALSE, borders = FALSE, label.norm = "O")
+
+#######PLSPM
+
+library(plspm)
+
+#rows of LV matrix
+Attack = c(0,0,0)
+Defense = c(0,0,0)
+Success = c(1,1,0)
+LVPath=rbind(Attack, Defense, Success)
+colnames(LVPath) = rownames(LVPath)
