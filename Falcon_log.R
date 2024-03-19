@@ -1,14 +1,21 @@
+# grep -s "Warning" C:/Falcon2/warning_logs/{*,.*} >> all_warning.txt
+
+
 library(dplyr)
 library(tidyverse)
 library(xlsx)
-library(readxl)
-library(openxlsx)
+library(data.table)
 library(ggplot2)
 library(ggpubr)
 library(skimr)
 
+
+
 parse_log <- function(file){
-  log_file_warning = read.csv(file,header  =FALSE, skip = 1,sep = "|") %>% filter(V3 ==" Warning")   
+  print(file)
+  log_file_warning = fread(file,sep = "\t",skip = 1,header = FALSE) %>% 
+  extract(V1,c("Time", "Lable","State","Infor"),  "(.+)\\|\\s+(.+)\\|\\s+(.+)\\|\\|\\s+(.+)") %>% 
+  filter(State ==" Warning")   
 }
 
 ####EDC
