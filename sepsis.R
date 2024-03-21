@@ -1,6 +1,6 @@
 library(dplyr)
 library(tidyverse)
-library(xlsx)
+library(readr)
 library(readxl)
 library(openxlsx)
 library(ggplot2)
@@ -8,19 +8,20 @@ library(ggpubr)
 library(skimr)
 
 read_pre <- function(file){
+  print(file)
   edcform = read_csv(file) 
-  edcform %>%  rename_with(~ paste0(edcform$DataPageName[1],"_", .), -c("project","studyid", "Subject", "SDVTier","Site","SiteNumber","SiteGroup"))
-      
+  edcform %>% select(-c("projectid","project","studyid","environmentName","subjectId","StudySiteId","SDVTier","siteid","Site","SiteNumber","SiteGroup","instanceId","InstanceName","InstanceRepeatNumber","folderid","Folder","FolderName","FolderSeq","TargetDays","DataPageId","PageRepeatNumber","RecordDate","RecordId","RecordPosition","MinCreated","MaxUpdated","SaveTS","StudyEnvSiteNumber")) %>%
+  rename_with(~ paste0(edcform$DataPageName[1],"_", .), -c("Subject","DataPageName"))
 }
 
 ####EDC
-data_join <- list.files(path = "./EDC_pro/", # Identify all CSV files
-                       pattern = "*.csv", full.names = TRUE) %>% 
+data_join <- list.files(path = "./EDC/", # Identify all CSV files
+                       pattern = "*.CSV", full.names = TRUE) %>% 
   lapply(read_pre) %>%                              # Store all files in list
   reduce(full_join, by = "Subject")                      # Full-join data sets into one data set 
 
 ###instrument
-ins <- read_csv("Interim1_instruments.csv")
+ins <- read_csv("Interim2_instruments.csv")
 
 mdw_filter = ins %>% 
 select(RDFilename,matches("MDW"),matches("Ly_DC"),matches("Ly_Op_Mean")) %>% 
@@ -34,16 +35,16 @@ ins %>% select(matches("Ly"))  %>% mutate_if(is.character, as.numeric) %>% skimr
 
 ###clinical label
 
-label <- read_excel("Interim_label1.xlsx", skip = 1)
+label <- read_excel("Interim2_instruments.xlsx", skip = 1)
 
-label1 = label[!is.na(label[,2]),1:2]
-colnames(label1)=c("Subject","Label")
+label1 = label[!is.na(label[,2]),1:3]
+colnames(label1)=c("Subject","Label","Batch")
 
-label2 = label[!is.na(label[,4]),3:4]
-colnames(label2)=c("Subject","Label")
+label2 = label[!is.na(label[,4]),4:6]
+colnames(label2)=c("Subject","Label","Batch")
 
-label3 = label[!is.na(label[,6]),5:6]
-colnames(label3)=c("Subject","Label")
+label3 = label[!is.na(label[,6]),7:9]
+colnames(label3)=c("Subject","Label","Batch")
 
 Sepsis_Label <- rbind( rbind(label1 ,  label2), label3) 
 
