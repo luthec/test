@@ -78,8 +78,7 @@ write.xlsx(arrange(res, Subject),  "Sepsis_STAT_new.xlsx",  colNames = TRUE)
 
 
 ######explore
-
-Sepsis_type=c("Septic shock (severe sepsis + hypotension)","Severe sepsis (organ dysfunction or tissue hypoperfusion)","Sepsis (2 SIRS + infection)")
+Sepsis_type=c("脓毒性休克（严重脓毒症+低血压）","严重脓毒症（器官功能障碍或组织灌注不足）","脓毒症（全身炎症反应综合征+感染）")
 
 res2 = res %>% filter(is.na(剔除标签)) %>%
        mutate_at(c('MDW'), as.numeric) %>% 
@@ -88,20 +87,20 @@ res2 = res %>% filter(is.na(剔除标签)) %>%
        drop_na(Sepsis2) %>% 
        mutate(Sepsis2_Sum = ifelse(Sepsis2 %in% Sepsis_type, "Sepsis" , Sepsis2))
 
-my_comparisons <- list( c("Infection without sepsis", "Sepsis"), c("Infection without sepsis", "SIRS (>= 2 SIRS criteria)"), c("Non-SIRS/non-infection (control case)","Infection without sepsis") )
+my_comparisons <- list( c("感染，非脓毒症", "Sepsis"), c("感染，非脓毒症", "SIRS （≥2 SIRS标准）"), c("非全身炎症反应综合征/非感染（对照病例）","感染，非脓毒症") )
 
 
 outpdf=paste("Sepsis","_cor.pdf",sep='')
 pdf(outpdf, width = 16, height = 10, family="GB1")
 
-ggplot(data=res2,aes(x=factor(Sepsis2_Sum,level = c("Non-SIRS/non-infection (control case)","SIRS (>= 2 SIRS criteria)", "Infection without sepsis", "Sepsis")),y=Lymph_index)) +
+ggplot(data=res2,aes(x=factor(Sepsis2_Sum,level = c("非全身炎症反应综合征/非感染（对照病例）","SIRS （≥2 SIRS标准）", "感染，非脓毒症", "Sepsis")),y=Lymph_index)) +
 geom_boxplot()+
 geom_jitter(width = 0.2, alpha = 0.5, color = 'red') +
 geom_hline(yintercept = mean(res2$Lymph_index), linetype = 2) +
 stat_compare_means(comparisons = my_comparisons,method = "wilcox.test", label = "p.signif")
 
 
-ggplot(data=res2,aes(x=factor(Sepsis2_Sum,level = c("Non-SIRS/non-infection (control case)","SIRS (>= 2 SIRS criteria)", "Infection without sepsis", "Sepsis")),y=MDW)) +
+ggplot(data=res2,aes(x=factor(Sepsis2_Sum,level = c("非全身炎症反应综合征/非感染（对照病例）","SIRS （≥2 SIRS标准）", "感染，非脓毒症", "Sepsis")),y=MDW)) +
 geom_boxplot()+
 geom_jitter(width = 0.2, alpha = 0.5, color = 'red') +
 geom_hline(yintercept = mean(res2$MDW), linetype = 2) +
@@ -117,18 +116,17 @@ ggplot(res2, aes(x = MDW, y = Lymph_index, color=Sepsis2_Sum)) + geom_point() + 
 
 dev.off()
 
-
-res3 =  res2 %>% filter(Sepsis2_Sum== "Non-SIRS/non-infection (control case)") %>%
+res3 =  res2 %>% filter(Sepsis2_Sum== "非全身炎症反应综合征/非感染（对照病例）") %>%
         mutate(MDW_Diag = ifelse(MDW > 20.5, "假阳", NA)) %>% 
         mutate(Ly_Diag = ifelse(Lymph_index > 11.68, "病毒感染", NA)) %>%
-        select(MDW,MDW_Diag,Lymph_index,Ly_Diag,Sepsis2_Sum,"Adjudicator1_Sepsis2", "Adjudicator1_Sepsis3","Adjudicator2_Sepsis2", "Adjudicator2_Sepsis3","Arbitrator_Sepsis2", "Arbitrator_Sepsis3") 
+        select(MDW,MDW_Diag,Lymph_index,Ly_Diag,既有状况,Sepsis2_Sum,"Adjudicator1_Sepsis2", "Adjudicator1_Sepsis3","Adjudicator2_Sepsis2", "Adjudicator2_Sepsis3","Arbitrator_Sepsis2", "Arbitrator_Sepsis3") 
         
 write.xlsx(res3,  "Non-SIRS_screen.xlsx",  colNames = TRUE)
 
 
-res4 =  res2 %>% filter(Sepsis2_Sum== "SIRS (>= 2 SIRS criteria)") %>%
+res4 =  res2 %>% filter(Sepsis2_Sum== "SIRS （≥2 SIRS标准）") %>%
         mutate(MDW_Diag = ifelse(MDW > 20.5, "假阳", NA)) %>% 
         mutate(Ly_Diag = ifelse(Lymph_index > 11.68, "病毒感染", NA)) %>%
-        select(MDW,MDW_Diag,Lymph_index,Ly_Diag,Sepsis2_Sum,"Adjudicator1_Sepsis2", "Adjudicator1_Sepsis3","Adjudicator2_Sepsis2", "Adjudicator2_Sepsis3","Arbitrator_Sepsis2", "Arbitrator_Sepsis3") 
+        select(MDW,MDW_Diag,Lymph_index,Ly_Diag,既有状况,Sepsis2_Sum,"Adjudicator1_Sepsis2", "Adjudicator1_Sepsis3","Adjudicator2_Sepsis2", "Adjudicator2_Sepsis3","Arbitrator_Sepsis2", "Arbitrator_Sepsis3") 
         
 write.xlsx(res4,  "SIRS_screen.xlsx",  colNames = TRUE)
