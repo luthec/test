@@ -9,8 +9,10 @@ library(skimr)
 
 read_pre <- function(file){
   print(file)
-  edcform = read_csv(file) 
-  edcform %>% select(-c("projectid","project","studyid","environmentName","subjectId","StudySiteId","SDVTier","siteid","Site","SiteNumber","SiteGroup","instanceId","InstanceName","InstanceRepeatNumber","folderid","Folder","FolderName","FolderSeq","TargetDays","DataPageId","PageRepeatNumber","RecordDate","RecordId","RecordPosition","MinCreated","MaxUpdated","SaveTS","StudyEnvSiteNumber")) %>%
+  edcform = read_csv(file,show_col_types = FALSE) 
+  print(dim(edcform))
+  edcform %>% group_by(Subject) %>% slice(1) %>% 
+  select(-c("projectid","project","studyid","environmentName","subjectId","StudySiteId","SDVTier","siteid","Site","SiteNumber","SiteGroup","instanceId","InstanceName","InstanceRepeatNumber","folderid","Folder","FolderName","FolderSeq","TargetDays","DataPageId","PageRepeatNumber","RecordDate","RecordId","RecordPosition","MinCreated","MaxUpdated","SaveTS","StudyEnvSiteNumber")) %>%
   rename_with(~ paste0(edcform$DataPageName[1],"_", .), -c("Subject","DataPageName"))
 }
 
@@ -35,15 +37,15 @@ ins %>% select(matches("Ly"))  %>% mutate_if(is.character, as.numeric) %>% skimr
 
 ###clinical label
 
-label <- read_excel("Interim2_instruments.xlsx", skip = 1)
+label <- read_excel("Interim2_labels.xlsx", skip = 1)
 
-label1 = label[!is.na(label[,2]),1:3]
+label1 = label[!is.na(label[,3]),1:3]
 colnames(label1)=c("Subject","Label","Batch")
 
-label2 = label[!is.na(label[,4]),4:6]
+label2 = label[!is.na(label[,6]),4:6]
 colnames(label2)=c("Subject","Label","Batch")
 
-label3 = label[!is.na(label[,6]),7:9]
+label3 = label[!is.na(label[,9]),7:9]
 colnames(label3)=c("Subject","Label","Batch")
 
 Sepsis_Label <- rbind( rbind(label1 ,  label2), label3) 
@@ -51,10 +53,9 @@ Sepsis_Label <- rbind( rbind(label1 ,  label2), label3)
 
 res_t = data_join %>% rename("标本编号"="Patient Information_DXHSMP") %>%
        # unite(标本编号, c("StudyEnvSiteNumber", "ENROLL_NUM"),sep = "") %>% 
+       #left_join(mdw_filter, by = "标本编号") %>%
        right_join(mdw_filter, by = "标本编号") %>% 
        left_join(Sepsis_Label, by = "Subject") 
-
-
 
 
 ###generate final table
@@ -69,11 +70,11 @@ res = res_t %>% drop_na(Subject) %>%
       #compute Lymph_index
       mutate_at(c('Ly_DC_Mean', 'Ly_DC_SD', 'Ly_Op_Mean'), as.numeric) %>% mutate(Lymph_index =Ly_DC_Mean*Ly_DC_SD/Ly_Op_Mean) %>% 
       mutate(Label2 = ifelse(Lymph_index > 11.68, "可能感染", NA)) %>% 
-      select(Subject,标本编号,Time_Check,CBCADAT,Time,Enrollment_ENROLLYN,Label,Label2,Lymph_index,matches("Site")[1],Diff_MDW_Value,"CEC Adjudicator 1_SFDIAGA","CEC Adjudicator 1_FSDIAGARB","CEC Adjudicator 2_SFDIAGA","CEC Adjudicator 2_FSDIAGARB","CEC Arbitrator_SFDIAGA","CEC Arbitrator_FSDIAGARB") 
+      select(matches("Site")[1],Subject,标本编号,Time_Check,CBCADAT,Time,Enrollment_ENROLLYN_STD,Label,Batch,Label2,`Presenting Symptoms/Complaints (including symptom duration and intervention)_SYMOTH`,Lymph_index,Diff_MDW_Value,"CEC Adjudicator 1_SFDIAGA","CEC Adjudicator 1_FSDIAGARB","CEC Adjudicator 2_SFDIAGA","CEC Adjudicator 2_FSDIAGARB","CEC Arbitrator_SFDIAGA","CEC Arbitrator_FSDIAGARB") 
 
-colnames(res)=c("Subject", "标本编号","仪器分析时间检查","全血细胞分类计数分析日期时间","仪器真实分析时间","入组","剔除标签","新冠感染","Lymph_index","Site","MDW", "Adjudicator1_Sepsis2", "Adjudicator1_Sepsis3","Adjudicator2_Sepsis2", "Adjudicator2_Sepsis3","Arbitrator_Sepsis2", "Arbitrator_Sepsis3")
+colnames(res)=c("Site","Subject", "标本编号","仪器分析时间检查","全血细胞分类计数分析日期时间","仪器真实分析时间","入组","剔除标签","是否更新入组策略","病毒感染提示","既有状况","Lymph_index","MDW", "Adjudicator1_Sepsis2", "Adjudicator1_Sepsis3","Adjudicator2_Sepsis2", "Adjudicator2_Sepsis3","Arbitrator_Sepsis2", "Arbitrator_Sepsis3")
 
-write.xlsx(res,  "Sepsis_STAT_Covid.xlsx",  colNames = TRUE)
+write.xlsx(arrange(res, Subject),  "Sepsis_STAT_new.xlsx",  colNames = TRUE)
 
 
 ######explore
