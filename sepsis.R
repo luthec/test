@@ -16,11 +16,27 @@ read_pre <- function(file){
   rename_with(~ paste0(edcform$DataPageName[1],"_", .), -c("Subject","DataPageName"))
 }
 
+
+read_pre2  <- function(file){
+  print(file)
+  edcform = read_csv(file,show_col_types = FALSE) 
+  print(dim(edcform))
+  edcform %>% group_by(Subject) %>% slice(1) %>% 
+  select(-c("project","studyid","SDVTier","SiteNumber","SiteGroup","InstanceName","InstanceRepeatNumber","FolderName","RecordPosition","SaveTS","StudyEnvSiteNumber")) %>%
+  rename_with(~ paste0(edcform$DataPageName[1],"_", .), -c("Subject","DataPageName"))
+}
+
 ####EDC
 data_join <- list.files(path = "./EDC/", # Identify all CSV files
                        pattern = "*.CSV", full.names = TRUE) %>% 
   lapply(read_pre) %>%                              # Store all files in list
   reduce(full_join, by = "Subject")                      # Full-join data sets into one data set 
+
+lising_join = list.files(path = "./listing/", # Identify all CSV files
+                       pattern = "*.csv", full.names = TRUE) %>% 
+  lapply(read_pre2) %>%                              # Store all files in list
+  reduce(full_join, by = "Subject")
+
 
 ###instrument
 ins <- read_csv("Interim2_instruments.csv")
@@ -75,6 +91,13 @@ res = res_t %>% drop_na(Subject) %>%
 colnames(res)=c("Site","Subject", "标本编号","仪器分析时间检查","全血细胞分类计数分析日期时间","仪器真实分析时间","入组","剔除标签","是否更新入组策略","病毒感染提示","既有状况","Lymph_index","MDW", "Adjudicator1_Sepsis2", "Adjudicator1_Sepsis3","Adjudicator2_Sepsis2", "Adjudicator2_Sepsis3","Arbitrator_Sepsis2", "Arbitrator_Sepsis3")
 
 write.xlsx(arrange(res, Subject),  "Sepsis_STAT_new.xlsx",  colNames = TRUE)
+
+res_j = res %>% right_join(lising_join, by = "Subject") %>%
+select(Subject,`CEC Adjudicator 1_Site`,"入组","剔除标签","是否更新入组策略","MDW","CEC Adjudicator 1_SFDIAGA","CEC Adjudicator 1_FSDIAGARB","CEC Adjudicator 2_SFDIAGA","CEC Adjudicator 2_FSDIAGARB","CEC Arbitrator_SFDIAGA","CEC Arbitrator_FSDIAGARB") 
+
+colnames(res_j)=c("Subject", "Site","入组","剔除标签","是否更新入组策略","MDW", "Adjudicator1_Sepsis2", "Adjudicator1_Sepsis3","Adjudicator2_Sepsis2", "Adjudicator2_Sepsis3","Arbitrator_Sepsis2", "Arbitrator_Sepsis3")
+
+write.xlsx(arrange(res_j, Subject),  "Sepsis_STAT_old.xlsx",  colNames = TRUE)
 
 
 ######explore
