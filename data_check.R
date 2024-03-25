@@ -3,11 +3,28 @@ library(xlsx)
 library(readxl)
 
 
-dt = read_excel(dir()[2],sheet = 2,col_names = T)
+dt = read_excel("CHN-189_DSF_CRA_20240320.xlsx",sheet = 2,col_names = T,skip=3)[-1,]
 
-ins = read.csv(dir()[2], header = TRUE,skip=4)
+ins = read_csv("CSV-20240314.csv",skip=4)
 
-tg_ins = ins %>% as.tibble() %>% filter(检测名=="ThygIUO") %>% filter(grepl("^H",样本编号))  %>% select(样本编号,用户结果)
+tg_ins = ins %>% filter(检测名=="ThygIUO") %>% filter(grepl("^H",样本编号))  %>% select(样本编号,用户结果)
+
+
+dt_query = dt %>% select(受试者入组号,`结果（ng/mL）`)%>% 
+rename("样本编号"="受试者入组号") %>% 
+full_join(tg_ins, by = "样本编号") %>%
+mutate_at(c("结果（ng/mL）"), as.numeric)  %>%
+mutate(用户结果=round(用户结果,2)) %>%
+mutate(Query = ifelse(`结果（ng/mL）`!= 用户结果, "不等", "")) 
+
+
+write_excel_csv(dt_query,  "TG_query.csv")
+
+
+
+
+
+
 
 用户结果
 table(dt$组别)
@@ -22,8 +39,8 @@ table(dt$性别)
 
 sapply(dt$`年龄`, is.numeric)
 
-dtt = dt %>% filter(!grepl("^\\d+", `NT-proBNP 检测结果（ng/L）`))
-table(dtt$`NT-proBNP 检测结果（ng/L）`)
+dtt = dt %>% filter(!grepl("^\\d+", `结果（ng/L）`))
+table(dtt$`结果（ng/L）`)
 
 ############
 dt = read_excel(dir()[1],sheet = 2,col_names = T,skip=4)[-1,]
