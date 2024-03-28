@@ -12,7 +12,7 @@ read_pre <- function(file,filter){
   print(file)
   edcform = read_csv(file,show_col_types = FALSE) %>% select(-filter)
   
-  if (edcform$DataPageName[1] == "Laboratory value: (within 12 hours after ED visit)"){
+  if (edcform$DataPageName[1] == "实验室值：（在ED就诊后12小时内）"){
    edcform = edcform %>% select(-c("ANALYTE_STD")) %>% group_by(Subject) %>%
              pivot_wider(names_from = ANALYTE, values_from = c(LBDATE01,LBDATE02,LBDATE03,LBDATE04,LB01,LB02,LB03,LB04))
 
@@ -59,8 +59,8 @@ lising_join = list.files(path = "./listing/", # Identify all CSV files
 ###instrument file
 ins <- read_csv("Interim2_instruments.csv")
 
-mdw_filter = ins %>% 
-select(RDFilename,matches("MDW"),matches("Ly_DC"),matches("Ly_Op_Mean")) %>% 
+instrument_filter = ins %>% 
+select(RDFilename,Wbc,Mo_pct,matches("MDW"),Ly_pct,matches("Ly_DC"),matches("Ly_Op_Mean")) %>% 
 filter(Diff_MDW_Flag_NonNumericFlag=="NULL"& Diff_MDW_SingleCharParameterFlag=="NULL") %>%
 separate(RDFilename, into = c('Time','标本编号'), sep = '_') 
 # left_join(Patient_2023_07_04_18h09m_IVD, by = "标本编号") %>%
@@ -88,7 +88,7 @@ Sepsis_Label <- rbind( rbind(label1 ,  label2), label3)
 res_t = data_join %>% rename("标本编号"="Patient Information_DXHSMP") %>%
        # unite(标本编号, c("StudyEnvSiteNumber", "ENROLL_NUM"),sep = "") %>% 
        #left_join(mdw_filter, by = "标本编号") %>%
-       right_join(mdw_filter, by = "标本编号") %>% 
+       right_join(instrument_filter, by = "标本编号") %>% 
        left_join(Sepsis_Label, by = "Subject") 
 
 
@@ -140,8 +140,8 @@ write.xlsx(arrange(res_stat2, Subject),  "Sepsis_STAT_new.xlsx",  colNames = TRU
 #          select("Site","Subject","Adjudicator1_Sepsis2_check","Adjudicator1_Sepsis2","CEC Adjudicator 1_SFDIAGA","Adjudicator1_Sepsis3_check","Adjudicator1_Sepsis3","CEC Adjudicator 1_FSDIAGARB")
 #write.xlsx(arrange(res_com, Subject),  "Sepsis_com_test.xlsx",  colNames = TRUE)
 
+#report version
 
-######explore
 res = res_dat  %>% 
       #compute Lymph_index
       mutate_at(c('Ly_DC_Mean', 'Ly_DC_SD', 'Ly_Op_Mean'), as.numeric) %>% mutate(Lymph_index =Ly_DC_Mean*Ly_DC_SD/Ly_Op_Mean) %>% 
@@ -149,6 +149,18 @@ res = res_dat  %>%
       select(matches("Site")[1],Subject,标本编号,Time_Check,CBCADAT,Time,Enrollment_ENROLLYN_STD,Label,Batch,Ly_Label,`Presenting Symptoms/Complaints (including symptom duration and intervention)_SYMOTH`,Lymph_index,Diff_MDW_Value,"CEC Adjudicator 1_SFDIAGA","CEC Adjudicator 1_FSDIAGARB","CEC Adjudicator 2_SFDIAGA","CEC Adjudicator 2_FSDIAGARB","CEC Arbitrator_SFDIAGA","CEC Arbitrator_FSDIAGARB") 
 
 colnames(res)=c("Site","Subject", "标本编号","仪器分析时间检查","全血细胞分类计数分析日期时间","仪器真实分析时间","入组","剔除标签","是否更新入组策略","病毒感染提示","既有状况","Lymph_index","MDW", "Adjudicator1_Sepsis2", "Adjudicator1_Sepsis3","Adjudicator2_Sepsis2", "Adjudicator2_Sepsis3","Arbitrator_Sepsis2", "Arbitrator_Sepsis3")
+
+
+
+######explore
+
+
+res = res_dat  %>% 
+      #compute Lymph_index
+      mutate_at(c('Ly_DC_Mean', 'Ly_DC_SD', 'Ly_Op_Mean'), as.numeric) %>% mutate(Lymph_index =Ly_DC_Mean*Ly_DC_SD/Ly_Op_Mean) %>% 
+      mutate(Ly_Label = ifelse(Lymph_index > 11.68, "可能感染", NA)) %>% 
+      select(matches("Site")[1],Subject,Enrollment_ENROLLYN_STD,Label,Batch,Ly_Label,`Laboratory value: (within 12 hours after ED visit)_LB01_降钙素原 （ng/mL）`,Lymph_index,Diff_MDW_Value,`Presenting Symptoms/Complaints (including symptom duration and intervention)_SYMOTH`,"CEC Adjudicator 1_SFDIAGA","CEC Adjudicator 1_FSDIAGARB","CEC Adjudicator 2_SFDIAGA","CEC Adjudicator 2_FSDIAGARB","CEC Arbitrator_SFDIAGA","CEC Arbitrator_FSDIAGARB") 
+
 
 Sepsis_type=c("脓毒性休克（严重脓毒症+低血压）","严重脓毒症（器官功能障碍或组织灌注不足）","脓毒症（全身炎症反应综合征+感染）")
 
