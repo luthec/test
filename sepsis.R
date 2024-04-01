@@ -164,17 +164,38 @@ res = res_dat  %>%
      mutate(across(c("EDC_PCT1","EDC_CRP1"), readr::parse_number))%>%
      mutate(PCT_Label = ifelse(EDC_PCT1 > 1.1, "Bac_Infection_PCT", NA)) %>% 
      mutate(CRP_Label = ifelse(EDC_CRP1 > 100, "Bac_Infection_CRP", NA)) %>%
-     select(matches("Site")[1],Subject,标本编号,Time_Check,CBCADAT,Time,Enrollment_ENROLLYN_STD,Label,Batch,PCT_Label,EDC_PCT1,CRP_Label,EDC_CRP1,BV_Label,Wbc,EDC_WBC1,Ly_pct,EDC_Ly_pct1,BB_Label,Ne_pct,EDC_Ne_pct1,Ly_Label,Lymph_index,Diff_MDW_Value,"CEC Adjudicator 1_SFDIAGA","CEC Adjudicator 1_FSDIAGARB","CEC Adjudicator 2_SFDIAGA","CEC Adjudicator 2_FSDIAGARB","CEC Arbitrator_SFDIAGA","CEC Arbitrator_FSDIAGARB",`Presenting Symptoms/Complaints (including symptom duration and intervention)_SYMOTH`) 
+     #EDC information
+     #感染处理
+     rename(IW="Infection Workup_IW_YN") %>%
+     rename(SEROYN="Bacterial Testing Log_SEROYN") %>%
+     rename(VIRALRES="Other Culture and Rapid Test_VIRALRES") %>%
+     rename(FUNGALRE="Other Culture and Rapid Test_FUNGALRE") %>%
+     rename(OTHTPERF="Other Culture and Rapid Test_OTHTPERF") %>%
+     # 抗生素抗病毒药物
+     rename(ANTIBYN="Antibiotics, antiviral and antifungal drugs_ANTIBYN") %>%
+     rename(ANTIVYN="Antibiotics, antiviral and antifungal drugs_ANTIVYN") %>%
+     rename(ANTIFYN="Antibiotics, antiviral and antifungal drugs_ANTIFYN") %>%
+     rename(OTHINYN="Antibiotics, antiviral and antifungal drugs_OTHINYN") %>%
+     # 诊断手术
+     rename(OTHTPERF="Surgery/Diagnostics_TOMO_INF") %>%
+     rename(TOMOFIND="Surgery/Diagnostics_TOMOFIND") %>%
+     rename(ABCTFIND="Surgery/Diagnostics_ABCTFIND") %>%
+     rename(ABULFIND="Surgery/Diagnostics_ABULFIND") %>%
+     rename(OTHEXFIN="Surgery/Diagnostics_OTHEXFIN") %>%
+     rename(SURGPFIN="Surgery/Diagnostics_SURGPFIN") %>%
+     rename(XRAYFIND="Surgery/Diagnostics_XRAYFIND") %>%
+
+     select(matches("Site")[1],Subject,标本编号,Time_Check,CBCADAT,Time,Enrollment_ENROLLYN_STD,Label,Batch,IW,SEROYN,ANTIBYN,VIRALRES,ANTIVYN,FUNGALRE,ANTIFYN,OTHTPERF,OTHINYN,PCT_Label,EDC_PCT1,CRP_Label,EDC_CRP1,BV_Label,Wbc,EDC_WBC1,Ly_pct,EDC_Ly_pct1,BB_Label,Ne_pct,EDC_Ne_pct1,Ly_Label,Lymph_index,Diff_MDW_Value,"CEC Adjudicator 1_SFDIAGA","CEC Adjudicator 1_FSDIAGARB","CEC Adjudicator 2_SFDIAGA","CEC Adjudicator 2_FSDIAGARB","CEC Arbitrator_SFDIAGA","CEC Arbitrator_FSDIAGARB",`Presenting Symptoms/Complaints (including symptom duration and intervention)_SYMOTH`) 
  
  res_c=res
- colnames(res_c)=c("Site","Subject", "标本编号","仪器分析时间检查","全血细胞分类计数分析日期时间","仪器真实分析时间","入组","剔除标签","是否更新入组策略","EDC_PCT_Bacteria_Infection","EDC_PCT1","EDC_CRP_Bacteria_Infection","EDC_CRP1","血常规_病毒感染提示","INS_WBC","EDC_WBC1","INS_Ly_Percent","EDC_Ly_Percent1","血常规_细菌感染提示","INS_Ne_Percent","EDC_Ne_Percent1","淋巴指数_病毒感染提示","Lymph_index","MDW", "Adjudicator1_Sepsis2", "Adjudicator1_Sepsis3","Adjudicator2_Sepsis2", "Adjudicator2_Sepsis3","Arbitrator_Sepsis2", "Arbitrator_Sepsis3","既有状况")
+ colnames(res_c)=c("Site","Subject", "标本编号","仪器分析时间检查","全血细胞分类计数分析日期时间","仪器真实分析时间","入组","剔除标签","是否更新入组策略","感染处理","细菌检测","抗生素","病毒检测","抗病毒","真菌检测","抗真菌","其他感染","其他抗感染药物", "EDC_PCT_Bacteria_Infection","EDC_PCT1","EDC_CRP_Bacteria_Infection","EDC_CRP1","血常规_病毒感染提示","INS_WBC","EDC_WBC1","INS_Ly_Percent","EDC_Ly_Percent1","血常规_细菌感染提示","INS_Ne_Percent","EDC_Ne_Percent1","淋巴指数_病毒感染提示","Lymph_index","MDW", "Adjudicator1_Sepsis2", "Adjudicator1_Sepsis3","Adjudicator2_Sepsis2", "Adjudicator2_Sepsis3","Arbitrator_Sepsis2", "Arbitrator_Sepsis3","既有状况" ,"计算机断层扫描浸润或固结","计算机断层扫描检查结果","腹部计算机断层扫描检查结果","腹部超声检查结果","其他相关检查检查结果","手术检查结果","胸部x光检结果")
  
  write.xlsx(arrange(res_c, Subject),  "Sepsis_CRA.xlsx",  colNames = TRUE)
 
 
 ######explore
 
-colnames(res)=c("Site","Subject", "标本编号","仪器分析时间检查","全血细胞分类计数分析日期时间","仪器真实分析时间","入组","剔除标签","是否更新入组策略","EDC_PCT_Bacteria_Infection","EDC_PCT1","EDC_CRP_Bacteria_Infection","EDC_CRP1","BV_Label","INS_WBC","EDC_WBC1","INS_Ly_Percent","EDC_Ly_Percent1","BB_Label","INS_Ne_Percent","EDC_Ne_Percent1","Ly_Label","Lymph_index","MDW", "Adjudicator1_Sepsis2", "Adjudicator1_Sepsis3","Adjudicator2_Sepsis2", "Adjudicator2_Sepsis3","Arbitrator_Sepsis2", "Arbitrator_Sepsis3","既有状况")
+colnames(res)=c("Site","Subject", "标本编号","仪器分析时间检查","全血细胞分类计数分析日期时间","仪器真实分析时间","入组","剔除标签","是否更新入组策略","感染处理","细菌检测","抗生素","病毒检测","抗病毒","真菌检测","抗真菌","其他感染","其他抗感染药物","EDC_PCT_Bacteria_Infection","EDC_PCT1","EDC_CRP_Bacteria_Infection","EDC_CRP1","BV_Label","INS_WBC","EDC_WBC1","INS_Ly_Percent","EDC_Ly_Percent1","BB_Label","INS_Ne_Percent","EDC_Ne_Percent1","Ly_Label","Lymph_index","MDW", "Adjudicator1_Sepsis2", "Adjudicator1_Sepsis3","Adjudicator2_Sepsis2", "Adjudicator2_Sepsis3","Arbitrator_Sepsis2", "Arbitrator_Sepsis3","既有状况" ,"计算机断层扫描浸润或固结","计算机断层扫描检查结果","腹部计算机断层扫描检查结果","腹部超声检查结果","其他相关检查检查结果","手术检查结果","胸部x光检结果")
  
 Sepsis_type=c("脓毒性休克（严重脓毒症+低血压）","严重脓毒症（器官功能障碍或组织灌注不足）","脓毒症（全身炎症反应综合征+感染）")
 
@@ -229,16 +250,16 @@ ggplot(res2, aes(x = MDW, y = Lymph_index, color=Sepsis2_Sum)) + geom_point() + 
 dev.off()
 
 res3 =  res2 %>% filter(Sepsis2_Sum== "非全身炎症反应综合征/非感染（对照病例）") %>%
-        mutate(MDW_Diag = ifelse(MDW > 20, "假阳", NA)) %>% 
-        select(MDW,MDW_Diag,Lymph_index,Ly_Label,BV_Label,EDC_PCT_Bacteria_Infection,EDC_CRP_Bacteria_Infection,BB_Label,既有状况,Sepsis2_Sum,"Adjudicator1_Sepsis2", "Adjudicator1_Sepsis3","Adjudicator2_Sepsis2", "Adjudicator2_Sepsis3","Arbitrator_Sepsis2", "Arbitrator_Sepsis3") 
+        mutate(MDW_Diag = ifelse(MDW > 20, "MDW>20", NA)) %>% 
+        select(MDW,MDW_Diag,IW,Lymph_index,Ly_Label,BV_Label,EDC_PCT_Bacteria_Infection,EDC_CRP_Bacteria_Infection,BB_Label,既有状况,Sepsis2_Sum,"Adjudicator1_Sepsis2", "Adjudicator1_Sepsis3","Adjudicator2_Sepsis2", "Adjudicator2_Sepsis3","Arbitrator_Sepsis2", "Arbitrator_Sepsis3") 
 
 
 write.xlsx(res3,  "Non-SIRS_screen.xlsx",  colNames = TRUE)
 
 
 res4 =  res2 %>% filter(Sepsis2_Sum== "SIRS （≥2 SIRS标准）") %>%
-        mutate(MDW_Diag = ifelse(MDW > 20, "假阳", NA)) %>% 
-        select(MDW,MDW_Diag,Lymph_index,Ly_Label,BV_Label,EDC_PCT_Bacteria_Infection,EDC_CRP_Bacteria_Infection,BB_Label,既有状况,Sepsis2_Sum,"Adjudicator1_Sepsis2", "Adjudicator1_Sepsis3","Adjudicator2_Sepsis2", "Adjudicator2_Sepsis3","Arbitrator_Sepsis2", "Arbitrator_Sepsis3") 
+        mutate(MDW_Diag = ifelse(MDW > 20, "MDW>20", NA)) %>% 
+        select(MDW,MDW_Diag,IW,Lymph_index,Ly_Label,BV_Label,EDC_PCT_Bacteria_Infection,EDC_CRP_Bacteria_Infection,BB_Label,既有状况,Sepsis2_Sum,"Adjudicator1_Sepsis2", "Adjudicator1_Sepsis3","Adjudicator2_Sepsis2", "Adjudicator2_Sepsis3","Arbitrator_Sepsis2", "Arbitrator_Sepsis3") 
       
 write.xlsx(res4,  "SIRS_screen.xlsx",  colNames = TRUE)
 
