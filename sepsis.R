@@ -262,7 +262,7 @@ res2 = res %>% filter(is.na(剔除标签)) %>%
 my_comparisons <- list( c("感染，非脓毒症", "Sepsis"), c("感染，非脓毒症", "SIRS （≥2 SIRS标准）"), c("非全身炎症反应综合征/非感染（对照病例）","感染，非脓毒症") )
 
 
-outpdf=paste("Sepsis","_cor.pdf",sep='')
+outpdf=paste("Sepsis","_plot.pdf",sep='')
 pdf(outpdf, width = 16, height = 10, family="GB1")
 
 ggplot(data=res2,aes(x=factor(Sepsis2_Sum,level = c("非全身炎症反应综合征/非感染（对照病例）","SIRS （≥2 SIRS标准）", "感染，非脓毒症", "Sepsis")),y=MDW)) +
@@ -291,13 +291,47 @@ geom_jitter(width = 0.2, alpha = 0.5, color = 'red') +
 geom_hline(yintercept = mean(res2$MDW), linetype = 2) +
 stat_compare_means(comparisons = my_comparisons,method = "wilcox.test", label = "p.signif")
 
-
+##Correlation Lv
 ggplot(res2, aes(x = MDW, y = Lymph_index)) +
   geom_point() +
   stat_smooth(method = "lm", level = 0.95, fill = "blue", alpha = 0.3) +
   theme_bw()+stat_cor(data=res2, method = "spearman")
 
 ggplot(res2, aes(x = MDW, y = Lymph_index, color=Sepsis2_Sum)) + geom_point() + stat_smooth(method = 'lm')
+
+##Correlation PCT
+ggplot(res2, aes(x = MDW, y = EDC_PCT1)) +
+  geom_point() +
+  stat_smooth(method = "lm", level = 0.95, fill = "blue", alpha = 0.3) +
+  theme_bw()+stat_cor(data=res2, method = "spearman")
+
+ggplot(res2, aes(x = MDW, y = EDC_PCT1, color=Sepsis2_Sum)) + geom_point() + stat_smooth(method = 'lm')
+
+##Correlation PCT
+ggplot(res2, aes(x = MDW, y = EDC_IL6_1)) +
+  geom_point() +
+  stat_smooth(method = "lm", level = 0.95, fill = "blue", alpha = 0.3) +
+  theme_bw()+stat_cor(data=res2, method = "spearman")
+
+ggplot(res2, aes(x = MDW, y = EDC_IL6_1, color=Sepsis2_Sum)) + geom_point() + stat_smooth(method = 'lm')
+
+##Correlation PCT
+ggplot(res2, aes(x = MDW, y = EDC_CRP1)) +
+  geom_point() +
+  stat_smooth(method = "lm", level = 0.95, fill = "blue", alpha = 0.3) +
+  theme_bw()+stat_cor(data=res2, method = "spearman")
+
+ggplot(res2, aes(x = MDW, y = EDC_CRP1, color=Sepsis2_Sum)) + geom_point() + stat_smooth(method = 'lm')
+
+##Correlation WBC
+res2$WBC_Wrong <- ifelse(abs(res2$INS_WBC-res2$EDC_WBC1) >= 4,res2$Subject,NA)
+
+
+ggplot(res2, aes(x = INS_WBC, y = EDC_WBC1)) +
+  geom_point() +
+  geom_text(aes(label=WBC_Wrong),vjust=-0.5) +
+  stat_smooth(method = "lm", level = 0.95, fill = "blue", alpha = 0.3) +
+  theme_bw()+stat_cor(data=res2, method = "spearman")
 
 dev.off()
 
