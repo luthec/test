@@ -326,6 +326,8 @@ ggplot(res2, aes(x = MDW, y = EDC_CRP1, color=Sepsis2_Sum)) + geom_point() + sta
 ##Correlation WBC
 res2$WBC_Wrong <- ifelse(abs(res2$INS_WBC-res2$EDC_WBC1) >= 4,res2$Subject,NA)
 
+cooksd <-
+
 
 ggplot(res2, aes(x = INS_WBC, y = EDC_WBC1)) +
   geom_point() +
