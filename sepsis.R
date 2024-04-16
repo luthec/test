@@ -158,7 +158,7 @@ res = res_dat  %>%
      rename(EDC_Ly_pct1="实验室值：（在ED就诊后12小时内）_LB01_淋巴细胞 %")%>%
      rename(EDC_Ne_pct1="实验室值：（在ED就诊后12小时内）_LB01_中性粒细胞 %")%>%
      mutate(across(c("EDC_WBC1","EDC_Ly_pct1","EDC_Ne_pct1"), readr::parse_number))%>%
-     mutate(EDC_Ly_num1 = EDC_WBC1*EDC_Ly_pct1)%>%
+     mutate(EDC_Ly_num1 = EDC_WBC1*EDC_Ly_pct1/100)%>%
      #EDC细菌指标
      rename(EDC_IL6_1="实验室值：（在ED就诊后12小时内）_LB01_白细胞介素6 (pg/mL) (如适用)")%>%
      rename(EDC_PCT1="实验室值：（在ED就诊后12小时内）_LB01_降钙素原 （ng/mL）")%>%
@@ -169,7 +169,7 @@ res = res_dat  %>%
      mutate(PCT_Label = ifelse(EDC_PCT1 > 1.1, "Bac_Infection_PCT", NA)) %>% 
      mutate(CRP_Label = ifelse(EDC_CRP1 > 100, "Bac_Infection_CRP", NA)) %>%
      #LIP score
-     mutate(LIP_L = cut(Ly_no, breaks = c(0, 0.7, 1), right = FALSE, labels = c("2", "1"))) %>%
+     mutate(LIP_L = cut(EDC_Ly_num1, breaks = c(0, 0.7, 1), right = FALSE, labels = c("2", "1"))) %>%
      mutate(LIP_I = cut(EDC_INR1, breaks = c(1.2,1.4,Inf), right = FALSE, labels = c("1", "2"))) %>%
      mutate(LIP_P = cut(EDC_PCT1, breaks = c(0.5,2,Inf), right = FALSE, labels = c("1", "2"))) %>%
      mutate_at(c('LIP_L', 'LIP_I', 'LIP_P'), as.character) %>%
@@ -237,17 +237,17 @@ res = res_dat  %>%
      rename(OTHEXFIN="Surgery/Diagnostics_OTHEXFIN") %>%
      rename(SURGPFIN="Surgery/Diagnostics_SURGPFIN") %>%
      rename(XRAYFIND="Surgery/Diagnostics_XRAYFIND") %>%
-     select(matches("Site")[1],Subject,标本编号,Time_Check,CBCADAT,Time,Enrollment_ENROLLYN_STD,Label,Batch,IW,SEROYN,ANTIBYN,VIRALRES,ANTIVYN,FUNGALRE,ANTIFYN,OTHTPERF,OTHINYN,IL6_Label,EDC_IL6_1,PCT_Label,EDC_PCT1,CRP_Label,EDC_CRP1,BV_Label,Wbc,EDC_WBC1,Ly_pct,EDC_Ly_pct1,BB_Label,Ne_pct,EDC_Ne_pct1,Ly_Label,Lymph_index,Diff_MDW_Value,LIP_Label,LIP,Ly_no,EDC_INR1,ED_IF,IF_Ac,IF_Pre,ED_ImSu,ImSu_Chemo,ImSu_Long,ImSu_Other_YN,ImSu_HU_YN,ED_BC,BC_Ab,BC_Ne_De_YN,BC_Ne_Th_YN,"CEC Adjudicator 1_SFDIAGA","CEC Adjudicator 1_FSDIAGARB","CEC Adjudicator 2_SFDIAGA","CEC Adjudicator 2_FSDIAGARB","CEC Arbitrator_SFDIAGA","CEC Arbitrator_FSDIAGARB",`Presenting Symptoms/Complaints (including symptom duration and intervention)_SYMOTH`,PM_Gastr,PM_Hema,PM_AutoIm,PM_Car,PM_Genit,PM_Respi,PM_Meta,PM_Cns,PM_Renal,PM_Hepati,PM_Other,TOMO_INF,TOMOFIND,ABCTFIND,ABULFIND,OTHEXFIN,SURGPFIN,XRAYFIND) 
+     select(matches("Site")[1],Subject,标本编号,Time_Check,CBCADAT,Time,Enrollment_ENROLLYN_STD,Label,Batch,IW,SEROYN,ANTIBYN,VIRALRES,ANTIVYN,FUNGALRE,ANTIFYN,OTHTPERF,OTHINYN,IL6_Label,EDC_IL6_1,PCT_Label,EDC_PCT1,CRP_Label,EDC_CRP1,BV_Label,Wbc,EDC_WBC1,Ly_pct,EDC_Ly_pct1,BB_Label,Ne_pct,EDC_Ne_pct1,Ly_Label,Lymph_index,Diff_MDW_Value,LIP_Label,LIP,Ly_no,EDC_Ly_num1,EDC_INR1,ED_IF,IF_Ac,IF_Pre,ED_ImSu,ImSu_Chemo,ImSu_Long,ImSu_Other_YN,ImSu_HU_YN,ED_BC,BC_Ab,BC_Ne_De_YN,BC_Ne_Th_YN,"CEC Adjudicator 1_SFDIAGA","CEC Adjudicator 1_FSDIAGARB","CEC Adjudicator 2_SFDIAGA","CEC Adjudicator 2_FSDIAGARB","CEC Arbitrator_SFDIAGA","CEC Arbitrator_FSDIAGARB",`Presenting Symptoms/Complaints (including symptom duration and intervention)_SYMOTH`,PM_Gastr,PM_Hema,PM_AutoIm,PM_Car,PM_Genit,PM_Respi,PM_Meta,PM_Cns,PM_Renal,PM_Hepati,PM_Other,TOMO_INF,TOMOFIND,ABCTFIND,ABULFIND,OTHEXFIN,SURGPFIN,XRAYFIND) 
  
  res_c=res
- colnames(res_c)=c("Site","Subject", "标本编号","仪器分析时间检查","全血细胞分类计数分析日期时间","仪器真实分析时间","入组","剔除标签","是否更新入组策略","感染处理","细菌检测","抗生素","病毒检测","抗病毒","真菌检测","抗真菌","其他感染","其他抗感染药物", "EDC_IL6_Bacteria_Infection","EDC_IL6_1","EDC_PCT_Bacteria_Infection","EDC_PCT1","EDC_CRP_Bacteria_Infection","EDC_CRP1","血常规_病毒感染提示","INS_WBC","EDC_WBC1","INS_Ly_Percent","EDC_Ly_Percent1","血常规_细菌感染提示","INS_Ne_Percent","EDC_Ne_Percent1","淋巴指数_病毒感染提示","Lymph_index","MDW","LIP_Sepsis3","LIP_score","Ly_Num","EDC_INR1","既有状况_感染","活动性感染而接受抗生素治疗","抗生素初级预防治疗","既有状况_免疫抑制","化疗导致免疫抑制","免疫抑制剂长期治疗","因HIV or 器官或骨髓移植而疑似免疫抑制","羟基脲治","既有状况_血细胞异常","患有影响全血细胞分类计数的血液病受试者","中性粒细胞减少症","受试者接受中性粒细胞减少症治疗","Adjudicator1_Sepsis2", "Adjudicator1_Sepsis3","Adjudicator2_Sepsis2", "Adjudicator2_Sepsis3","Arbitrator_Sepsis2", "Arbitrator_Sepsis3","出现症状" ,"PM_Gastr","PM_Hema","PM_AutoIm","PM_Car","PM_Genit","PM_Respi","PM_Meta","PM_Cns","PM_Renal","PM_Hepati","PM_Other","计算机断层扫描浸润或固结","计算机断层扫描检查结果","腹部计算机断层扫描检查结果","腹部超声检查结果","其他相关检查检查结果","手术检查结果","胸部x光检结果")
+ colnames(res_c)=c("Site","Subject", "标本编号","仪器分析时间检查","全血细胞分类计数分析日期时间","仪器真实分析时间","入组","剔除标签","是否更新入组策略","感染处理","细菌检测","抗生素","病毒检测","抗病毒","真菌检测","抗真菌","其他感染","其他抗感染药物", "EDC_IL6_Bacteria_Infection","EDC_IL6_1","EDC_PCT_Bacteria_Infection","EDC_PCT1","EDC_CRP_Bacteria_Infection","EDC_CRP1","血常规_病毒感染提示","INS_WBC","EDC_WBC1","INS_Ly_Percent","EDC_Ly_Percent1","血常规_细菌感染提示","INS_Ne_Percent","EDC_Ne_Percent1","淋巴指数_病毒感染提示","Lymph_index","MDW","LIP_Sepsis3","LIP_score","Ly_Num","EDC_Ly_num1","EDC_INR1","既有状况_感染","活动性感染而接受抗生素治疗","抗生素初级预防治疗","既有状况_免疫抑制","化疗导致免疫抑制","免疫抑制剂长期治疗","因HIV or 器官或骨髓移植而疑似免疫抑制","羟基脲治","既有状况_血细胞异常","患有影响全血细胞分类计数的血液病受试者","中性粒细胞减少症","受试者接受中性粒细胞减少症治疗","Adjudicator1_Sepsis2", "Adjudicator1_Sepsis3","Adjudicator2_Sepsis2", "Adjudicator2_Sepsis3","Arbitrator_Sepsis2", "Arbitrator_Sepsis3","出现症状" ,"PM_Gastr","PM_Hema","PM_AutoIm","PM_Car","PM_Genit","PM_Respi","PM_Meta","PM_Cns","PM_Renal","PM_Hepati","PM_Other","计算机断层扫描浸润或固结","计算机断层扫描检查结果","腹部计算机断层扫描检查结果","腹部超声检查结果","其他相关检查检查结果","手术检查结果","胸部x光检结果")
  
  write.xlsx(arrange(res_c, Subject),  "Sepsis_CRA3.xlsx",  colNames = TRUE)
 
 
 ######explore
 
-colnames(res)=c("Site","Subject", "标本编号","仪器分析时间检查","全血细胞分类计数分析日期时间","仪器真实分析时间","入组","剔除标签","是否更新入组策略","感染处理","细菌检测","抗生素","病毒检测","抗病毒","真菌检测","抗真菌","其他感染","其他抗感染药物","EDC_IL6_Bacteria_Infection","EDC_IL6_1","EDC_PCT_Bacteria_Infection","EDC_PCT1","EDC_CRP_Bacteria_Infection","EDC_CRP1","BV_Label","INS_WBC","EDC_WBC1","INS_Ly_Percent","EDC_Ly_Percent1","BB_Label","INS_Ne_Percent","EDC_Ne_Percent1","Ly_Label","Lymph_index","MDW", "LIP_Sepsis3","LIP_score","Ly_Num","EDC_INR1","ED_IF","IF_Ac","IF_Pre","ED_ImSu","ImSu_Chemo","ImSu_Long","ImSu_Other_YN","ImSu_HU_YN","ED_BC","BC_Ab","BC_Ne_De_YN","BC_Ne_Th_YN","Adjudicator1_Sepsis2", "Adjudicator1_Sepsis3","Adjudicator2_Sepsis2", "Adjudicator2_Sepsis3","Arbitrator_Sepsis2", "Arbitrator_Sepsis3","出现症状" ,"PM_Gastr","PM_Hema","PM_AutoIm","PM_Car","PM_Genit","PM_Respi","PM_Meta","PM_Cns","PM_Renal","PM_Hepati","PM_Other","计算机断层扫描浸润或固结","计算机断层扫描检查结果","腹部计算机断层扫描检查结果","腹部超声检查结果","其他相关检查检查结果","手术检查结果","胸部x光检结果")
+colnames(res)=c("Site","Subject", "标本编号","仪器分析时间检查","全血细胞分类计数分析日期时间","仪器真实分析时间","入组","剔除标签","是否更新入组策略","感染处理","细菌检测","抗生素","病毒检测","抗病毒","真菌检测","抗真菌","其他感染","其他抗感染药物","EDC_IL6_Bacteria_Infection","EDC_IL6_1","EDC_PCT_Bacteria_Infection","EDC_PCT1","EDC_CRP_Bacteria_Infection","EDC_CRP1","BV_Label","INS_WBC","EDC_WBC1","INS_Ly_Percent","EDC_Ly_Percent1","BB_Label","INS_Ne_Percent","EDC_Ne_Percent1","Ly_Label","Lymph_index","MDW", "LIP_Sepsis3","LIP_score","Ly_Num","EDC_Ly_num1","EDC_INR1","ED_IF","IF_Ac","IF_Pre","ED_ImSu","ImSu_Chemo","ImSu_Long","ImSu_Other_YN","ImSu_HU_YN","ED_BC","BC_Ab","BC_Ne_De_YN","BC_Ne_Th_YN","Adjudicator1_Sepsis2", "Adjudicator1_Sepsis3","Adjudicator2_Sepsis2", "Adjudicator2_Sepsis3","Arbitrator_Sepsis2", "Arbitrator_Sepsis3","出现症状" ,"PM_Gastr","PM_Hema","PM_AutoIm","PM_Car","PM_Genit","PM_Respi","PM_Meta","PM_Cns","PM_Renal","PM_Hepati","PM_Other","计算机断层扫描浸润或固结","计算机断层扫描检查结果","腹部计算机断层扫描检查结果","腹部超声检查结果","其他相关检查检查结果","手术检查结果","胸部x光检结果")
  
 Sepsis_type=c("脓毒性休克（严重脓毒症+低血压）","严重脓毒症（器官功能障碍或组织灌注不足）","脓毒症（全身炎症反应综合征+感染）")
 
@@ -324,14 +324,31 @@ ggplot(res2, aes(x = MDW, y = EDC_CRP1)) +
 ggplot(res2, aes(x = MDW, y = EDC_CRP1, color=Sepsis2_Sum)) + geom_point() + stat_smooth(method = 'lm')
 
 ##Correlation WBC
-res2$WBC_Wrong <- ifelse(abs(res2$INS_WBC-res2$EDC_WBC1) >= 4,res2$Subject,NA)
+# res2$WBC_Wrong <- ifelse(abs(res2$INS_WBC-res2$EDC_WBC1) >= 4,res2$Subject,NA)
 
-cooksd <-
+WBC_model <- lm(INS_WBC ~ EDC_WBC1, data =res2)
+res2[attr(WBC_model$residuals , which = "name"), "WBC_resid"] <- WBC_model$residuals
+residual_threshold <- 2 * sd(res2$WBC_resid,na.rm =TRUE)
 
+res2$WBC_Wrong <-ifelse(abs(res2$WBC_resid) > residual_threshold, res2$Subject,NA)
 
 ggplot(res2, aes(x = INS_WBC, y = EDC_WBC1)) +
   geom_point() +
-  geom_text(aes(label=WBC_Wrong),vjust=-0.5) +
+  geom_text(aes(label=WBC_Wrong),vjust=-0.5,nudge_x = 0.1, nudge_y = 0.1) +
+  stat_smooth(method = "lm", level = 0.95, fill = "blue", alpha = 0.3) +
+  theme_bw()+stat_cor(data=res2, method = "spearman")
+
+
+
+LY_model <- lm(Ly_Num ~ EDC_Ly_num1, data =res2)
+res2[attr(LY_model$residuals , which = "name"), "LY_resid"] <- LY_model$residuals
+residual_threshold <- 2 * sd(res2$LY_resid,na.rm =TRUE)
+
+res2$LY_Wrong <-ifelse(abs(res2$LY_resid) > residual_threshold, res2$Subject,NA)
+
+ggplot(res2, aes(x = Ly_Num, y = EDC_Ly_num1)) +
+  geom_point() +
+#   geom_text(aes(label=LY_Wrong),vjust=-0.5,nudge_x = 0.1, nudge_y = 0.1) +
   stat_smooth(method = "lm", level = 0.95, fill = "blue", alpha = 0.3) +
   theme_bw()+stat_cor(data=res2, method = "spearman")
 
@@ -352,7 +369,7 @@ res4 =  res2 %>% filter(Sepsis2_Sum== "SIRS （≥2 SIRS标准）") %>%
 write.xlsx(res4,  "SIRS_screen.xlsx",  colNames = TRUE)
 
 
-write.xlsx(rbind(res3,res4) %>% filter(!is.na(MDW_Diag)),  "Negative_screen2.xlsx",  colNames = TRUE)
+write.xlsx(rbind(res3,res4) %>% filter(!is.na(MDW_Diag)),  "Negative_screen3.xlsx",  colNames = TRUE)
 
 
 print(paste0("非全身炎症反应综合征/非感染（对照病例）","Lymph_index Mean:", mean(res3$Lymph_index) %>% round(2) , "+_", sd(res3$Lymph_index) %>% round(2) ))     
