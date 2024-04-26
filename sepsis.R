@@ -42,7 +42,7 @@ read_pre <- function(file,filter){
 ####SAS On Demand
 long_filter_terms=c("projectid","project","studyid","environmentName","subjectId","StudySiteId","SDVTier","siteid","Site","SiteNumber","SiteGroup","instanceId","InstanceName","InstanceRepeatNumber","folderid","Folder","FolderName","FolderSeq","TargetDays","DataPageId","PageRepeatNumber","RecordDate","RecordId","RecordPosition","MinCreated","MaxUpdated","SaveTS","StudyEnvSiteNumber")
 
-data_join <- list.files(path = "./CHN_097_EDC/", # Identify all CSV files
+data_join <- list.files(path = "./EDC/", # Identify all CSV files
                        pattern = "*.CSV|*.txt", full.names = TRUE) %>% 
   lapply(read_pre,filter=long_filter_terms) %>%                              # Store all files in list
   reduce(full_join, by = "Subject")                      # Full-join data sets into one data set 
@@ -69,7 +69,7 @@ ins %>% select(matches("Ly"))  %>% mutate_if(is.character, as.numeric) %>% skimr
 
 ###clinical label
 
-label <- read_excel("Interim2_labels.xlsx", skip = 1)
+label <- read_excel("Sepsis_Label-20240423.xlsx", skip = 1)
 
 label1 = label[!is.na(label[,3]),1:3]
 colnames(label1)=c("Subject","Label","Batch")
