@@ -69,7 +69,7 @@ ins %>% select(matches("Ly"))  %>% mutate_if(is.character, as.numeric) %>% skimr
 
 ###clinical label
 
-label <- read_excel("Sepsis_Label-20240423.xlsx", skip = 1)
+label <- read_excel("Sepsis_Labe-20240511.xlsx", skip = 1)
 
 label1 = label[!is.na(label[,3]),1:3]
 colnames(label1)=c("Subject","Label","Batch")
@@ -129,10 +129,12 @@ res_stat = res_dat %>%
 
 colnames(res_stat)=c("Site","Subject", "性别","年龄", "剔除标签","是否更新入组策略","MDW", "Adjudicator1_Sepsis2", "Adjudicator1_Sepsis3","Adjudicator2_Sepsis2", "Adjudicator2_Sepsis3","Arbitrator_Sepsis2", "Arbitrator_Sepsis3")
 
+write.xlsx(arrange(res_stat, Subject),  "Sepsis_STAT_Chi.xlsx",  colNames = TRUE)
+
 res_stat2 = res_stat %>% mutate_at("Site",trans_site) %>% 
             mutate_at(c("Adjudicator1_Sepsis2", "Adjudicator1_Sepsis3","Adjudicator2_Sepsis2", "Adjudicator2_Sepsis3","Arbitrator_Sepsis2", "Arbitrator_Sepsis3"),trans_chi) 
 
-write.xlsx(arrange(res_stat2, Subject),  "Sepsis_STAT.xlsx",  colNames = TRUE)
+write.xlsx(arrange(res_stat2, Subject),  "Sepsis_STAT_Eng.xlsx",  colNames = TRUE)
 
 ##check
 #res_com = res_stat2 %>%  right_join(lising_join, by = "Subject") %>% 
