@@ -69,7 +69,7 @@ ins %>% select(matches("Ly"))  %>% mutate_if(is.character, as.numeric) %>% skimr
 
 ###clinical label
 
-label <- read_excel("Sepsis_Labe-20240511.xlsx", skip = 1)
+label <- read_excel("Sepsis20240514.xlsx", skip = 1)
 
 label1 = label[!is.na(label[,3]),1:3]
 colnames(label1)=c("Subject","Label","Batch")
