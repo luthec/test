@@ -103,3 +103,97 @@ inter_samples=intersect(mat1$SampleID,mat2$SampleID)
 create_output_table(compare_df(arrange(mat1 %>% filter(SampleID %in% inter_samples) , SampleID),arrange(mat2 %>% filter(SampleID %in% inter_samples) , SampleID)), output_type = 'xlsx', file_name = paste0(marker,"_queries.xlsx"))
 
 
+####batch2
+
+ins = read_csv(dir()[6])
+
+predicate = read_csv(dir()[1],quote = "") %>% 
+            rename(SampleID="Sample ID")
+
+
+#######DHEA-S
+marker="DHEA-S"
+
+mat1 = ins %>% filter(TestName==marker) %>% 
+            filter(SampleID %in% 170001:170050)  %>% 
+            left_join(predicate  %>% filter(`Test Name`=="DHE-S"),by="SampleID") %>% 
+            select(SampleID,DoseResult,Result)
+
+mat2 = read_excel("CHN-170_DHEA-S_DSF_CRA_ZXY_20240531.xlsx", skip = 2) %>% 
+          rename(SampleID="唯一可溯源编号") %>% 
+          rename(DoseResult="DxI 9000仪器检测结果\r\n检测结果（µg/dL）") %>%
+          rename(Result="Access 2仪器检测结果\r\n检测结果（µg/dL）") %>%
+          select(SampleID,DoseResult,Result) %>%
+          mutate_at(c('SampleID'), as.character)
+
+inter_samples=intersect(mat1$SampleID,mat2$SampleID)
+
+create_output_table(compare_df(arrange(mat1 %>% filter(SampleID %in% inter_samples) , SampleID),arrange(mat2 %>% filter(SampleID %in% inter_samples) , SampleID)), output_type = 'xlsx', file_name = paste0(marker,"_queries.xlsx"))
+
+
+#######Total T3
+marker="Total T3"
+dsf="CHN-217_TT3_DSF_CRA_ZXY_20240531.xlsx"
+
+mat1 = ins %>% filter(TestName==marker) %>% 
+            filter(SampleID %in% 217001:217050)  %>% 
+            left_join(predicate  %>% filter(`Test Name`=="TotT3"),by="SampleID") %>% 
+            select(SampleID,DoseResult,Result)
+
+mat2 = read_excel(dsf, skip = 2) %>% 
+          rename(SampleID="唯一可溯源编号") %>% 
+          rename(DoseResult="DxI 9000仪器检测结果\r\n检测结果（ng/mL）") %>%
+          rename(Result="Access 2仪器检测结果\r\n检测结果（ng/mL）") %>%
+          select(SampleID,DoseResult,Result) %>%
+          mutate_at(c('SampleID'), as.character)
+
+inter_samples=intersect(mat1$SampleID,mat2$SampleID)
+
+create_output_table(compare_df(arrange(mat1 %>% filter(SampleID %in% inter_samples) , SampleID),arrange(mat2 %>% filter(SampleID %in% inter_samples) , SampleID)), output_type = 'xlsx', file_name = paste0(marker,"_queries.xlsx"))
+
+
+#######Total T3
+marker="hGH"
+dsf="CHN-227_hGH_DSF_CRA_ZXY_20240531.xlsx"
+
+mat1 = ins %>% filter(TestName==marker) %>% 
+            filter(SampleID %in% 227001:227051)  %>% 
+            left_join(predicate  %>% filter(`Test Name`=="hGH2"),by="SampleID") %>% 
+            select(SampleID,DoseResult,Result)
+
+mat2 = read_excel(dsf, skip = 2) %>% 
+          rename(SampleID="唯一可溯源编号") %>% 
+          rename(DoseResult="DxI 9000仪器检测结果\r\n检测结果（ng/mL）") %>%
+          rename(Result="Access 2仪器检测结果\r\n检测结果（ng/mL）") %>%
+          select(SampleID,DoseResult,Result) %>%
+          mutate_at(c('SampleID'), as.character)
+
+inter_samples=intersect(mat1$SampleID,mat2$SampleID)
+
+create_output_table(compare_df(arrange(mat1 %>% filter(SampleID %in% inter_samples) , SampleID),arrange(mat2 %>% filter(SampleID %in% inter_samples) , SampleID)), output_type = 'xlsx', file_name = paste0(marker,"_queries.xlsx"))
+
+
+
+#######OV125Ag
+marker="OV125Ag"
+dsf="CHN-229_CA125_DSF_CRA_ZXY_20240529.xlsx"
+
+mat1 = ins %>% filter(TestName==marker) %>% 
+            filter(SampleID %in% 229001:229251)  %>% 
+            left_join(predicate  %>% filter(`Test Name`==marker),by="SampleID") %>% 
+            select(SampleID,DoseResult,Result)
+
+write_excel_csv(ins %>% filter(TestName==marker) %>% select(SampleID,TestName,DoseResult),  paste0(marker,"_wrongnumbers.csv"))
+
+mat2 = read_excel(dsf, skip = 2) %>% 
+          rename(SampleID="唯一可溯源编号") %>% 
+          rename(DoseResult="DxI 9000仪器检测结果\r\n检测结果（U/mL）") %>%
+          rename(Result="Access 2仪器检测结果\r\n检测结果（U/mL）") %>%
+          select(SampleID,DoseResult,Result) %>%
+          mutate_at(c('SampleID'), as.character)
+
+inter_samples=intersect(mat1$SampleID,mat2$SampleID)
+
+create_output_table(compare_df(arrange(mat1 %>% filter(SampleID %in% inter_samples) , SampleID),arrange(mat2 %>% filter(SampleID %in% inter_samples) , SampleID)), output_type = 'xlsx', file_name = paste0(marker,"_queries.xlsx"))
+
+
