@@ -71,8 +71,8 @@ cll.bcells <- subset(x = cll, subset =MS4A1 > 0 | CD79A > 0 | CD19 > 0)
 p1 <- DimPlot(tcells.cluster, reduction = "umap", group.by = "orig.ident")
 p2 <- DimPlot(tcells.cluster, reduction = "umap", label = TRUE, repel = TRUE)
 
-p3 <- DimPlot(tcells.cluster, reduction = "umap", split.by = "label")
-p4 <- FeaturePlot(tcells.cluster, features = c("CD8A", "GZMK", "CCL5", "CCR7"), min.cutoff = "q9")
+p3 <- DimPlot(tcells.cluster, reduction = "umap", split.by = "label", label = TRUE)
+p4 <- FeaturePlot(tcells.cluster, features = c("CD8A", "GZMK", "CCL5", "CCR7","ITGA4","BCL2"), min.cutoff = "q9")
 
 outpdf=paste("UMAP","_all.pdf",sep='')
 pdf(outpdf, width = 16, height = 10)
