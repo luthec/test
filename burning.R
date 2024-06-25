@@ -271,3 +271,9 @@ ggpubr::ggarrange(glm.select.mod_plot_test, mem.select.mod_plot_test, nrow = 1)
 dev.off()
 
 
+######model evaluation
+library("performance")
+
+fit.glm.select %>% model_parameters() 
+
+fit.glm.select %>% check_model()
