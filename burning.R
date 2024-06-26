@@ -272,8 +272,45 @@ dev.off()
 
 
 ######model evaluation
-library("performance")
+library(readxl)
+library(dplyr)
+library(ggpubr)
+library(tidyverse)
+library(parameters)
+library(ggplot2)
+library(performance)
+
+fit.glm.blank = glm(耐受 ~ 烧伤指数 , family = binomial,data=dt_select) 
+
+fit.glm = glm(耐受 ~ 年龄+性别+BMI+吸入性损伤+天数+基础疾病+`24h血糖`+TBSA+烧伤指数+III度+脓毒症+HCTdALB+`1d_ALB`+`1dHB`+`1d_plt`+`1d_淋巴细胞`+`1d_TP`+`1d_TBIL`+`1d_DBIL`+`1d_CRE`+`1d_BUN`+`1d_PA`+`1d_LAC`, family = binomial,data=dt_select) 
+
+fit.glm.select =  fit.glm %>% select_parameters()
 
 fit.glm.select %>% model_parameters() 
 
-fit.glm.select %>% check_model()
+###########
+
+outpdf=paste("Model1","_.pdf",sep='')
+pdf(outpdf, width = 16, height = 10, family="GB1")    
+
+fit.glm %>% binned_residuals() %>% plot()
+fit.glm.select %>% binned_residuals() %>% plot()
+
+fit.glm %>% check_collinearity() %>% plot()
+fit.glm.select %>% check_collinearity() %>% plot()
+
+fit.glm %>% check_outliers() %>% plot()
+fit.glm.select %>% check_outliers() %>% plot()
+
+fit.glm %>% check_normality() %>% plot()
+fit.glm.select %>% check_normality() %>% plot()
+
+fit.glm %>% check_predictions()
+fit.glm.select %>% check_predictions()
+
+
+compare_performance(fit.glm.blank, fit.glm , fit.glm.select)  %>% plot()
+
+dev.off()
+
+
