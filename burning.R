@@ -308,7 +308,7 @@ fit.glm.select %>% check_normality() %>% plot()
 fit.glm %>% check_predictions()
 fit.glm.select %>% check_predictions()
 
-
+compare_performance(fit.glm.blank, fit.glm , fit.glm.select) %>% ggtexttable( theme = ttheme("light"))
 compare_performance(fit.glm.blank, fit.glm , fit.glm.select)  %>% plot()
 
 dev.off()
