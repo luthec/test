@@ -197,3 +197,66 @@ inter_samples=intersect(mat1$SampleID,mat2$SampleID)
 create_output_table(compare_df(arrange(mat1 %>% filter(SampleID %in% inter_samples) , SampleID),arrange(mat2 %>% filter(SampleID %in% inter_samples) , SampleID)), output_type = 'xlsx', file_name = paste0(marker,"_queries.xlsx"))
 
 
+
+####batch3
+
+#######CEA
+
+ins = read_csv(dir()[3])
+
+predicate = read_csv(dir()[1],quote = "") %>% 
+            rename(SampleID="Sample ID")
+
+
+markers=c("CEA","CEA_IUO")
+dsf="CHN-219_CEA_DSF_CRA_ZXY_20240627.xlsx"
+
+mat1 = ins %>% filter(TestName %in% markers) %>% 
+            filter(SampleID %in% 219001:219121)  %>% 
+            left_join(predicate  %>% filter(`Test Name`=="CEA2"),by="SampleID") %>% 
+            select(SampleID,DoseResult,Result)
+
+write_excel_csv(ins %>% filter(TestName==marker) %>% select(SampleID,TestName,DoseResult),  paste0(marker,"_wrongnumbers.csv"))
+
+mat2 = read_excel(dsf, skip = 2) %>% 
+          rename(SampleID="唯一可溯源编号") %>% 
+          rename(DoseResult="DxI 9000仪器检测结果\r\n检测结果（ng/mL）") %>%
+          rename(Result="Access 2仪器检测结果\r\n检测结果（ng/mL）") %>%
+          select(SampleID,DoseResult,Result) %>%
+          mutate_at(c('SampleID'), as.character)
+
+inter_samples=intersect(mat1$SampleID,mat2$SampleID)
+
+create_output_table(compare_df(arrange(mat1 %>% filter(SampleID %in% inter_samples) , SampleID),arrange(mat2 %>% filter(SampleID %in% inter_samples) , SampleID)), output_type = 'xlsx', file_name = paste0(marker,"_queries.xlsx"))
+
+
+
+#######BR15-3Ag
+
+ins = read_csv(dir()[3])
+
+predicate = read_csv(dir()[2],quote = "") %>% 
+            rename(SampleID="Sample ID")
+
+
+markers=c("BR15-3Ag","BR15-3Ag_IUO")
+dsf="CHN-230_CA15-3_DSF_CRA_TYH_20240627.xlsx"
+
+mat1 = ins %>% filter(TestName %in% markers) %>% 
+            filter(SampleID %in% c(230001:230046,228047:228057))  %>% 
+            left_join(predicate  %>% filter(`Test Name`=="BR15-3Ag"),by="SampleID") %>% 
+            select(SampleID,DoseResult,Result)
+
+write_excel_csv(ins %>% filter(TestName==marker) %>% select(SampleID,TestName,DoseResult),  paste0(marker,"_wrongnumbers.csv"))
+
+mat2 = read_excel(dsf, skip = 2) %>% 
+          rename(SampleID="唯一可溯源编号") %>% 
+          rename(DoseResult="DxI 9000仪器检测结果\r\n检测结果（U/mL）") %>%
+          rename(Result="Access 2仪器检测结果\r\n检测结果（U/mL）") %>%
+          select(SampleID,DoseResult,Result) %>%
+          mutate_at(c('SampleID'), as.character)
+
+inter_samples=intersect(mat1$SampleID,mat2$SampleID)
+
+create_output_table(compare_df(arrange(mat1 %>% filter(SampleID %in% inter_samples) , SampleID),arrange(mat2 %>% filter(SampleID %in% inter_samples) , SampleID)), output_type = 'xlsx', file_name = paste0(marker,"_queries.xlsx"))
+
