@@ -1,7 +1,14 @@
 library(dplyr)
 library(Seurat)
+library(SeuratData)
+# library(SeuratWrappers)
+library(Azimuth)
+library(ggplot2)
 library(ggrepel)
 library(ggpubr)
+library(future)
+plan("multicore", workers = 4)
+options(future.globals.maxSize = 50000 * 1024^2)
 
 
 SCT_intergration <- function(assay_list,n_dim=20) {  
@@ -46,6 +53,44 @@ names(sceList)  = folders
 for(i in 1:10) { sceList[[i]] $label <-"CLL"}
 for(i in 11:17) { sceList[[i]] $label <-"NC"}
 
+
+objs <- merge(x = sceList[[1]], y = sceList[2:17], add.cell.ids = names(sceList), project = "CLL")
+
+DefaultAssay(objs) <- 'RNA'
+
+objs <- objs %>% NormalizeData() %>%
+        FindVariableFeatures() %>%
+        ScaleData() %>% 
+        RunPCA(npcs = 30, verbose = F) 
+        
+DefaultAssay(objs) <- 'RNA'      
+
+objs_sct <- objs  %>% SCTransform() 
+objs_sct <- IntegrateLayers(
+            object = objs_sct,
+            method = RPCAIntegration,
+            normalization.method = "SCT",
+            verbose = F)
+
+
+objs <- IntegrateLayers(
+  object = objs, method = CCAIntegration,
+  orig.reduction = "pca", new.reduction = "integrated.cca",
+  verbose = FALSE
+)
+
+
+
+ %>%    FindNeighbors(dims = 1:30, reduction = "integrated.dr") %>%
+        FindClusters(resolution = 2)
+
+
+
+
+
+
+
+
 objs <-SCT_intergration(sceList[1:17])
 
 DefaultAssay(objs) <- 'SCT'
@@ -85,27 +130,4 @@ print(p7)
 
 dev.off()
 
-
-
-
-
-
-# Set up control object
-
-nc <-SCT_intergration(sceList[11:17])
-nc$label <- "NC"
-
-# DefaultAssay(nc) <- 'RNA'
-# nc <- JoinLayers(nc)
-
-cll <-SCT_intergration(sceList[1:10])
-cll$label <- "CLL"
-
-
-DefaultAssay(cll) <- 'SCT'
-DefaultAssay(nc) <- 'SCT'
-
-nc.bcells <- subset(x = nc, subset =MS4A1 > 0 | CD79A > 0 | CD19 > 0)
-cll.bcells <- subset(x = cll, subset =MS4A1 > 0 | CD79A > 0 | CD19 > 0)
-
-
+tcells.cluster <- RunAzimuth(tcells.cluster, reference = "pbmcref")
