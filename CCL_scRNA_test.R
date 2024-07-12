@@ -8,7 +8,7 @@ library(ggrepel)
 library(ggpubr)
 library(future)
 plan("multicore", workers = 4)
-options(future.globals.maxSize = 50000 * 1024^2)
+
 
 
 SCT_intergration <- function(assay_list,n_dim=20) {  
@@ -56,33 +56,60 @@ for(i in 11:17) { sceList[[i]] $label <-"NC"}
 
 objs <- merge(x = sceList[[1]], y = sceList[2:17], add.cell.ids = names(sceList), project = "CLL")
 
-DefaultAssay(objs) <- 'RNA'
+####cell annotation
+objs <- subset(objs, nFeature_RNA > 1000)
+objs <- RunAzimuth(objs, reference = "pbmcref")
 
-objs <- objs %>% NormalizeData() %>%
+#pre-normalization
+DefaultAssay(objs) <- 'RNA'
+bjs <- objs %>% NormalizeData() %>%
         FindVariableFeatures() %>%
         ScaleData() %>% 
         RunPCA(npcs = 30, verbose = F) 
         
+####integration 1
 DefaultAssay(objs) <- 'RNA'      
-
-objs_sct <- objs  %>% SCTransform() 
-objs_sct <- IntegrateLayers(
-            object = objs_sct,
+options(future.globals.maxSize = 50000 * 1024^2)
+objs <- objs  %>% SCTransform() 
+objs <- IntegrateLayers(
+            object = objs,
             method = RPCAIntegration,
             normalization.method = "SCT",
             verbose = F)
 
+objs <- FindNeighbors(objs, dims = 1:30, reduction = "integrated.dr")
+objs <- FindClusters(objs,graph.name = "RNA_snn",resolution = 2)
+objs <- RunUMAP(objs, dims = 1:30, reduction = "integrated.dr")
 
+####integration 2
 objs <- IntegrateLayers(
   object = objs, method = CCAIntegration,
   orig.reduction = "pca", new.reduction = "integrated.cca",
   verbose = FALSE
 )
+objs <- FindNeighbors(objs, reduction = "integrated.cca", dims = 1:30)
+objs <- FindClusters(objs, resolution = 2, cluster.name = "cca_clusters")
+objs <- RunUMAP(objs, reduction = "integrated.cca", dims = 1:30, reduction.name = "umap.cca")
 
 
+###
 
- %>%    FindNeighbors(dims = 1:30, reduction = "integrated.dr") %>%
-        FindClusters(resolution = 2)
+
+p1 <- DimPlot(
+  objs,
+  reduction = "umap.cca",
+  group.by = c("orig.ident", "cca_clusters"),
+  combine = FALSE, label.size = 2
+)
+
+p2 <- DimPlot(
+  objs_sct,
+  reduction = "umap",
+  group.by = c("orig.ident",  "seurat_clusters"),
+  combine = FALSE, label.size = 2
+)
+
+wrap_plots(c(p1, p2), ncol = 2, byrow = F)
 
 
 
