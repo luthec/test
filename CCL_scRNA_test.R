@@ -8,6 +8,8 @@ library(ggrepel)
 library(ggpubr)
 library(future)
 library(patchwork)
+library(MAST)
+library(irGSEA)
 plan("multicore", workers = 4)
 
 
@@ -133,7 +135,8 @@ wrap_plots(c(p01, p02, p03), ncol = 2)
 
 
 
-# names(alldata@graphs) 
+# names(objs.tcells@graphs) 
+# names(objs.tcells@reductions)[5]="umap"
 
 #常见的细胞群的maker基因分别是：上皮细胞（EPCAM、KRT19、CLDN4）、基质（PECAM1、CLO1A2、VWF）、增殖性（MKI67、STMN1、PCNA）、T（CD3D、CD3E、CD2）、B（CD79A，IGHG1，MS4A1），NK（KLRD1、GNLY、KLRF1）和髓系（CSF1R、CSF3R、CD68）细胞。
 DefaultAssay(objs) <- 'SCT'
@@ -143,6 +146,11 @@ tcells.cluster = Clustering_Cells(objs.tcells,"integrated.cca")
 
 objs.bcells <- subset(x = objs, subset =MS4A1 > 0 | CD79A > 0 | CD19 > 0| IGHG1 > 0)
 bcells.cluster = Clustering_Cells(objs.bcells,"integrated.cca")
+
+library(HGNChelper)
+source("https://raw.githubusercontent.com/kris-nader/sc-type/master/R/sctype_wrapper.R"); 
+
+tcells.cluster <- run_sctype(tcells.cluster, known_tissue_type="Immune system",custom_marker_file="ScTypeDB_full.xlsx",name="sctype_classification",plot=TRUE)
 
 
 #######figure
