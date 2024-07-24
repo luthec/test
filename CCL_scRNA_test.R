@@ -32,6 +32,19 @@ x <- FindClusters(x,graph.name = "RNA_snn", reduction = re,resolution = 0.5, alg
 RunUMAP(x, reduction = re, dims = 1:n_dim)
 }
 
+Specific_OBJ <- function(spe.obj,tar.gene,tar.cells='T_Cell') {
+#poscells <- WhichCells(cd8t.cells.10, expression = ITGA4 > 0)
+expr <- FetchData(object = spe.obj, vars = tar.gene ,layer = "counts", assay = "RNA")
+poscells <- spe.obj[, which(x = expr >= 1)] %>% colnames()
+
+spe.obj$TAR_exp<- paste0(spe.obj$label,"_",tar.cells,"_",tar.gene,ifelse(colnames(spe.obj) %in% poscells, "+", "-"))
+print(table(spe.obj$TAR_exp))
+spe.obj<- PrepSCTFindMarkers(spe.obj)
+Idents(spe.obj) <- "TAR_exp"
+subset(spe.obj,features=setdiff(rownames(spe.obj),tar.gene ))
+}
+
+
 ##########start
 
 
@@ -147,10 +160,47 @@ tcells.cluster = Clustering_Cells(objs.tcells,"integrated.cca")
 objs.bcells <- subset(x = objs, subset =MS4A1 > 0 | CD79A > 0 | CD19 > 0| IGHG1 > 0)
 bcells.cluster = Clustering_Cells(objs.bcells,"integrated.cca")
 
+##cell annotation
 library(HGNChelper)
 source("https://raw.githubusercontent.com/kris-nader/sc-type/master/R/sctype_wrapper.R"); 
 
-tcells.cluster <- run_sctype(tcells.cluster, known_tissue_type="Immune system",custom_marker_file="ScTypeDB_full.xlsx",name="sctype_classification",plot=TRUE)
+tcells.cluster <- run_sctype(tcells.cluster, known_tissue_type="Immune system",custom_marker_file="C:/Users/tliu05/Desktop/2023projects/01_DS/jiangsu/cell_annotation/ScTypeDB_full.xlsx",name="sctype_classification",plot=TRUE)
+
+##cell chat
+
+library(scriabin)
+
+Tcells.spe.names = subset(tcells.cluster, idents = "5",subset = CD8A > 0 | CD8B > 0) %>% colnames()
+
+Tcells.spe.names = subset(tcells.cluster[,tcells.cluster$label == "CLL"], idents = "5",subset = CD8A > 0 | CD8B > 0) %>% colnames()
+
+
+
+Bcells.spe.names = subset(bcells.cluster, idents = c("5","6","8","9"), invert = TRUE) %>% colnames()
+objs2 = objs
+objs2$celltype<- case_when(colnames(objs2) %in% Tcells.spe.names ~ paste0(objs2$label,"_CD8+Tcells"),
+                          colnames(objs2) %in% Bcells.spe.names ~ paste0(objs2$label,"_Bcells"))
+
+print(table(objs2$celltype))
+# Idents(objs2) <- "TAR_exp"
+
+CCIM <- function(obj,senders.names,receivers.names){
+        obj_ccim <- GenerateCCIM(obj, 
+                             senders = senders.names,
+                             receivers = receivers.names)
+        obj_ccim <- NormalizeData(obj_ccim) %>% 
+                    ScaleData() %>%
+                    FindVariableFeatures() %>%
+                    RunPCA() %>% 
+                    RunUMAP(dims = 1:10) %>%
+                    FindNeighbors(dims = 1:10) %>%
+                    FindClusters(resolution = 0.2)
+}
+
+DimPlot(objs2_ccim, group.by = "receiver_celltype")
+DimPlot(objs2_ccim, label = T, repel = T) + NoLegend()
+
+
 
 
 #######figure
@@ -160,6 +210,8 @@ p2 <- DimPlot(tcells.cluster, reduction = "umap", label = TRUE, repel = TRUE)
 p3 <- DimPlot(tcells.cluster, reduction = "umap", split.by = "label", label = TRUE)
 p4 <- FeaturePlot(tcells.cluster, reduction = "umap",features = c('CD8A','CD4','CD3D', 'CD3E', 'CD3G','CD2'), min.cutoff = "q9")
 p42 <- FeaturePlot(tcells.cluster, reduction = "umap",features = c("ITGA4","BCL2"), min.cutoff = "q9")
+p43 <- DimPlot(tcells.cluster, reduction = "umap", group.by = "sctype_classification")
+
 
 
 p5 <- DimPlot(bcells.cluster, reduction = "umap", group.by = "orig.ident")
@@ -176,6 +228,7 @@ print(p1+p2)
 print(p3)
 print(p4)
 print(p42)
+print(p43)
 
 VlnPlot(tcells.cluster, features = c("CD8A"))
 VlnPlot(tcells.cluster, features = c("CD4"))
@@ -188,4 +241,3 @@ print(p8)
 
 dev.off()
 
-tcells.cluster <- RunAzimuth(tcells.cluster, reference = "pbmcref")
