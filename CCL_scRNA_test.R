@@ -166,29 +166,29 @@ source("https://raw.githubusercontent.com/kris-nader/sc-type/master/R/sctype_wra
 
 tcells.cluster <- run_sctype(tcells.cluster, known_tissue_type="Immune system",custom_marker_file="C:/Users/tliu05/Desktop/2023projects/01_DS/jiangsu/cell_annotation/ScTypeDB_full.xlsx",name="sctype_classification",plot=TRUE)
 
+## grep(pattern = "^IL", x = rownames(bcells.cluster), value = TRUE)
+
 ##cell chat
 
 library(scriabin)
 
-Tcells.spe.names = subset(tcells.cluster, idents = "5",subset = CD8A > 0 | CD8B > 0) %>% colnames()
+ITGA4.exp.Tcells.spe.names = subset(tcells.cluster[,tcells.cluster$label == "CLL"], idents = "5",subset =( CD8A > 0 | CD8B > 0) & ITGA4 > 0 ) %>% colnames()
 
-Tcells.spe.names = subset(tcells.cluster[,tcells.cluster$label == "CLL"], idents = "5",subset = CD8A > 0 | CD8B > 0) %>% colnames()
+Immune_supress.Bcells.spe.names = subset(bcells.cluster[,bcells.cluster$label == "CLL"], idents = c("5","6","8","9"), invert = TRUE)  %>% 
+                                  subset(,subset = TGFB1 > 0) %>%
+                                  colnames()
 
 
 
-Bcells.spe.names = subset(bcells.cluster, idents = c("5","6","8","9"), invert = TRUE) %>% colnames()
-objs2 = objs
-objs2$celltype<- case_when(colnames(objs2) %in% Tcells.spe.names ~ paste0(objs2$label,"_CD8+Tcells"),
-                          colnames(objs2) %in% Bcells.spe.names ~ paste0(objs2$label,"_Bcells"))
+# objs2$celltype<- case_when(colnames(objs2) %in% Tcells.spe.names ~ paste0(objs2$label,"_CD8+Tcells"),
+#                          colnames(objs2) %in% Bcells.spe.names ~ paste0(objs2$label,"_Bcells"))
 
-print(table(objs2$celltype))
-# Idents(objs2) <- "TAR_exp"
-
+# print(table(objs2$celltype))
 CCIM <- function(obj,senders.names,receivers.names){
         obj_ccim <- GenerateCCIM(obj, 
                              senders = senders.names,
                              receivers = receivers.names)
-        obj_ccim <- NormalizeData(obj_ccim) %>% 
+        NormalizeData(obj_ccim) %>% 
                     ScaleData() %>%
                     FindVariableFeatures() %>%
                     RunPCA() %>% 
@@ -196,6 +196,8 @@ CCIM <- function(obj,senders.names,receivers.names){
                     FindNeighbors(dims = 1:10) %>%
                     FindClusters(resolution = 0.2)
 }
+
+objs_ccim = CCIM(objs,ITGA4.exp.Tcells.spe.names,Immune_supress.Bcells.spe.names)
 
 DimPlot(objs2_ccim, group.by = "receiver_celltype")
 DimPlot(objs2_ccim, label = T, repel = T) + NoLegend()
@@ -217,7 +219,10 @@ p43 <- DimPlot(tcells.cluster, reduction = "umap", group.by = "sctype_classifica
 p5 <- DimPlot(bcells.cluster, reduction = "umap", group.by = "orig.ident")
 p6 <- DimPlot(bcells.cluster, reduction = "umap", label = TRUE, repel = TRUE)
 p7 <- DimPlot(bcells.cluster, reduction = "umap", split.by = "label", label = TRUE)
+
 p8 <- FeaturePlot(bcells.cluster, reduction = "umap",features = c("MS4A1","CD79A","CD19","IGHG1"), min.cutoff = "q9")
+p9 <- FeaturePlot(bcells.cluster, reduction = "umap",features = c("TGFB1","IL10"), min.cutoff = "q9")
+
 
 outpdf=paste("UMAP","_all.pdf",sep='')
 pdf(outpdf, width = 16, height = 10)
@@ -238,6 +243,7 @@ VlnPlot(tcells.cluster, features = c("BCL2"))
 print(p5+p6)
 print(p7)
 print(p8)
+print(p9)
 
 dev.off()
 
