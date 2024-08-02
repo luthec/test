@@ -178,30 +178,59 @@ Immune_supress.Bcells.spe.names = subset(bcells.cluster[,bcells.cluster$label ==
                                   subset(,subset = TGFB1 > 0) %>%
                                   colnames()
 
+objs$celltype<- case_when(colnames(objs) %in% ITGA4.exp.Tcells.spe.names ~ paste0(objs$label,"_CD8+ITGA4+_Tcells"),
+                         colnames(objs) %in% Immune_supress.Bcells.spe.names ~ paste0(objs$label,"_TGFB1+_Bcells"))
 
-
-# objs2$celltype<- case_when(colnames(objs2) %in% Tcells.spe.names ~ paste0(objs2$label,"_CD8+Tcells"),
-#                          colnames(objs2) %in% Bcells.spe.names ~ paste0(objs2$label,"_Bcells"))
 
 # print(table(objs2$celltype))
 CCIM <- function(obj,senders.names,receivers.names){
         obj_ccim <- GenerateCCIM(obj, 
                              senders = senders.names,
                              receivers = receivers.names)
-        NormalizeData(obj_ccim) %>% 
+
+                    NormalizeData(obj_ccim) %>% 
                     ScaleData() %>%
                     FindVariableFeatures() %>%
                     RunPCA() %>% 
                     RunUMAP(dims = 1:10) %>%
+                    subset(subset = nCount_CCIM > 1) %>% 
                     FindNeighbors(dims = 1:10) %>%
                     FindClusters(resolution = 0.2)
 }
 
-objs_ccim = CCIM(objs,ITGA4.exp.Tcells.spe.names,Immune_supress.Bcells.spe.names)
+objs_ccim = CCIM(subset(objs, subset = nCount_RNA > 100),ITGA4.exp.Tcells.spe.names,Immune_supress.Bcells.spe.names)
 
-DimPlot(objs2_ccim, group.by = "receiver_celltype")
-DimPlot(objs2_ccim, label = T, repel = T) + NoLegend()
 
+
+
+DimPlot(objs_ccim, group.by = "receiver_celltype")
+DimPlot(objs_ccim, label = T, repel = T) + NoLegend()
+
+
+CCIMFeaturePlot(objs_ccim, seu = objs, features = c("ITGA4"), type_plot = "sender")
+
+
+####cellchat
+library(CellChat)
+
+
+CellChatDB <- CellChatDB.human # use CellChatDB.mouse if running on mouse data
+showDatabaseCategory(CellChatDB)
+
+# objs_cc = objs[ ,!is.na(objs$celltype)]
+# cellchat <- createCellChat(object = objs_cc, meta = objs_cc@meta.data, group.by = "celltype", assay = "RNA")
+cellchat <- createCellChat(object = objs[ ,!is.na(objs$celltype)] group.by = "celltype", assay = "RNA")
+
+
+cellchat <- subsetData(cellchat)
+
+cellchat <- identifyOverExpressedGenes(cellchat)
+#识别过表达配体受体对
+cellchat <- identifyOverExpressedInteractions(cellchat)
+
+#project gene expression data onto PPI (Optional: when running it, USER should set `raw.use = FALSE` in the function `computeCommunProb()` in order to use the projected data)
+cellchat <- projectData(cellchat, PPI.human)
+cellchat@data.project[1:4,1:4]
 
 
 
