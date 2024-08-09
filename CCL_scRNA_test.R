@@ -174,12 +174,16 @@ library(scriabin)
 
 ITGA4.exp.Tcells.spe.names = subset(tcells.cluster[,tcells.cluster$label == "CLL"], idents = "5",subset =( CD8A > 0 | CD8B > 0) & ITGA4 > 0 ) %>% colnames()
 
+ITGA4.nonexp.Tcells.spe.names = subset(tcells.cluster[,tcells.cluster$label == "CLL"], idents = "5",subset =( CD8A > 0 | CD8B > 0) & ITGA4 <= 0 ) %>% colnames()
+
 Immune_supress.Bcells.spe.names = subset(bcells.cluster[,bcells.cluster$label == "CLL"], idents = c("5","6","8","9"), invert = TRUE)  %>% 
                                   subset(,subset = TGFB1 > 0) %>%
+                                  subset(, downsample = 100) %>%
                                   colnames()
 
 objs$celltype<- case_when(colnames(objs) %in% ITGA4.exp.Tcells.spe.names ~ paste0(objs$label,"_CD8+ITGA4+_Tcells"),
-                         colnames(objs) %in% Immune_supress.Bcells.spe.names ~ paste0(objs$label,"_TGFB1+_Bcells"))
+                          colnames(objs) %in% ITGA4.nonexp.Tcells.spe.names ~ paste0(objs$label,"_CD8+ITGA4-_Tcells"),     
+                          colnames(objs) %in% Immune_supress.Bcells.spe.names ~ paste0(objs$label,"_TGFB1+_Bcells"))
 
 
 # print(table(objs2$celltype))
@@ -219,10 +223,36 @@ showDatabaseCategory(CellChatDB)
 
 # objs_cc = objs[ ,!is.na(objs$celltype)]
 # cellchat <- createCellChat(object = objs_cc, meta = objs_cc@meta.data, group.by = "celltype", assay = "RNA")
-cellchat <- createCellChat(object = objs[ ,!is.na(objs$celltype)] group.by = "celltype", assay = "RNA")
+cellchat <- createCellChat(object = objs[ ,!is.na(objs$celltype)], group.by = "celltype", assay = "RNA")
 
 
-cellchat <- subsetData(cellchat)
+##DB setup
+# use a subset of CellChatDB for cell-cell communication analysis
+CellChatDB$interaction$annotation %>% unique()
+# [1] "Secreted Signaling" "ECM-Receptor"       "Cell-Cell Contact" 
+
+CellChatDB.use <- subsetDB(CellChatDB, search = "Cell-Cell Contact", key = "annotation") # use Secreted Signaling
+
+# Only uses the Secreted Signaling from CellChatDB v1
+#  CellChatDB.use <- subsetDB(CellChatDB, search = list(c("Secreted Signaling"), c("CellChatDB v1")), key = c("annotation", "version"))
+
+# use all CellChatDB except for "Non-protein Signaling" for cell-cell communication analysis
+CellChatDB.use <- subsetDB(CellChatDB)
+
+
+# use all CellChatDB for cell-cell communication analysis
+# CellChatDB.use <- CellChatDB # simply use the default CellChatDB. We do not suggest to use it in this way because CellChatDB v2 includes "Non-protein Signaling" (i.e., metabolic and synaptic signaling). 
+
+# set the used database in the object
+cellchat@DB <- CellChatDB.use
+cellchat <- subsetData(cellchat,features = CellChatDB.use$geneInfo$Symbol)
+
+
+# DB_ligands = dplyr::glimpse(CellChatDB$interaction)$ligand %>% unique()
+# DB_receptors = dplyr::glimpse(CellChatDB$interaction)$receptor %>% unique()
+# cellchat <- subsetData(cellchat,features = c("ITGA4",DB_ligands,DB_receptors))
+
+cellchat <- updateCellChat(cellchat)
 
 cellchat <- identifyOverExpressedGenes(cellchat)
 #识别过表达配体受体对
@@ -232,7 +262,30 @@ cellchat <- identifyOverExpressedInteractions(cellchat)
 cellchat <- projectData(cellchat, PPI.human)
 cellchat@data.project[1:4,1:4]
 
+cellchat@LR
 
+cellchat <- computeCommunProb(cellchat, raw.use = TRUE, population.size = TRUE) 
+# Filter out the cell-cell communication if there are only few number of cells in certain cell groups
+cellchat <- filterCommunication(cellchat, min.cells = 10)
+
+#all the inferred cell-cell communications at the level of ligands/receptors
+df.net <- subsetCommunication(cellchat)
+write.csv(df.net, "cell-cell_communications.all.csv")
+
+#access the the inferred communications at the level of signaling pathways
+df.net1 <- subsetCommunication(cellchat,slot.name = "netP")
+
+#gives the inferred cell-cell communications sending from cell groups 1 and 2 to cell groups 4 and 5.
+levels(cellchat@idents)
+df.net2 <- subsetCommunication(cellchat, sources.use = c("Epi"), targets.use = c("Fibroblast" ,"T")) 
+
+#gives the inferred cell-cell communications mediated by signaling WNT and TGFb.
+df.net3 <- subsetCommunication(cellchat, signaling = c("CCL", "TGFb"))
+
+#计算每个信号通路相关的所有配体-受体相互作用的通信结果
+cellchat <- computeCommunProbPathway(cellchat)
+#计算整合的细胞类型之间通信结果
+cellchat <- aggregateNet(cellchat)
 
 #######figure
 p1 <- DimPlot(tcells.cluster, reduction = "umap", group.by = "orig.ident")
