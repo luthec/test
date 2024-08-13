@@ -181,9 +181,15 @@ Immune_supress.Bcells.spe.names = subset(bcells.cluster[,bcells.cluster$label ==
                                   subset(, downsample = 100) %>%
                                   colnames()
 
+Immune_nonsupress.Bcells.spe.names = subset(bcells.cluster[,bcells.cluster$label == "CLL"], idents = c("5","6","8","9"), invert = TRUE)  %>% 
+                                  subset(,subset = TGFB1 <= 0) %>%
+                                  subset(, downsample = 100) %>%
+                                  colnames()                                  
+
 objs$celltype<- case_when(colnames(objs) %in% ITGA4.exp.Tcells.spe.names ~ paste0(objs$label,"_CD8+ITGA4+_Tcells"),
                           colnames(objs) %in% ITGA4.nonexp.Tcells.spe.names ~ paste0(objs$label,"_CD8+ITGA4-_Tcells"),     
-                          colnames(objs) %in% Immune_supress.Bcells.spe.names ~ paste0(objs$label,"_TGFB1+_Bcells"))
+                          colnames(objs) %in% Immune_supress.Bcells.spe.names ~ paste0(objs$label,"_TGFB1+_Bcells"),
+                          colnames(objs) %in% Immune_nonsupress.Bcells.spe.names ~ paste0(objs$label,"_TGFB1-_Bcells"))
 
 
 # print(table(objs2$celltype))
@@ -231,7 +237,7 @@ cellchat <- createCellChat(object = objs[ ,!is.na(objs$celltype)], group.by = "c
 CellChatDB$interaction$annotation %>% unique()
 # [1] "Secreted Signaling" "ECM-Receptor"       "Cell-Cell Contact" 
 
-CellChatDB.use <- subsetDB(CellChatDB, search = "Cell-Cell Contact", key = "annotation") # use Secreted Signaling
+CellChatDB.use <- subsetDB(CellChatDB, search = "Secreted Signaling", key = "annotation") # use Secreted Signaling
 
 # Only uses the Secreted Signaling from CellChatDB v1
 #  CellChatDB.use <- subsetDB(CellChatDB, search = list(c("Secreted Signaling"), c("CellChatDB v1")), key = c("annotation", "version"))
@@ -286,6 +292,20 @@ df.net3 <- subsetCommunication(cellchat, signaling = c("CCL", "TGFb"))
 cellchat <- computeCommunProbPathway(cellchat)
 #计算整合的细胞类型之间通信结果
 cellchat <- aggregateNet(cellchat)
+
+####画图
+
+groupSize <- as.numeric(table(cellchat@idents))
+par(mfrow = c(1,2), xpd=TRUE)
+netVisual_circle(cellchat@net$count, vertex.weight = groupSize, 
+                 weight.scale = T, label.edge= F, title.name = "Number of interactions")
+netVisual_circle(cellchat@net$weight, vertex.weight = groupSize, 
+                 weight.scale = T, label.edge= F, title.name = "Interaction weights/strength")
+
+
+
+
+
 
 #######figure
 p1 <- DimPlot(tcells.cluster, reduction = "umap", group.by = "orig.ident")
