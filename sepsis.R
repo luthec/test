@@ -125,16 +125,18 @@ trans_site <- function(x){
 }
 
 res_stat = res_dat %>% 
-      select(matches("Site")[1],Subject,"Demographic Information of Patients_SEX_STD","Demographic Information of Patients_AGE",Label,Batch,Diff_MDW_Value,"CEC Adjudicator 1_SFDIAGA","CEC Adjudicator 1_FSDIAGARB","CEC Adjudicator 2_SFDIAGA","CEC Adjudicator 2_FSDIAGARB","CEC Arbitrator_SFDIAGA","CEC Arbitrator_FSDIAGARB") 
+      select(matches("Site")[1],Subject,"Demographic Information of Patients_SEX_STD","Demographic Information of Patients_AGE",Label,Diff_MDW_Value,"CEC Adjudicator 1_SFDIAGA","CEC Adjudicator 1_FSDIAGARB","CEC Adjudicator 2_SFDIAGA","CEC Adjudicator 2_FSDIAGARB","CEC Arbitrator_SFDIAGA","CEC Arbitrator_FSDIAGARB") 
 
-colnames(res_stat)=c("Site","Subject", "性别","年龄", "剔除标签","是否更新入组策略","MDW", "Adjudicator1_Sepsis2", "Adjudicator1_Sepsis3","Adjudicator2_Sepsis2", "Adjudicator2_Sepsis3","Arbitrator_Sepsis2", "Arbitrator_Sepsis3")
+# colnames(res_stat)=c("Site","Subject", "性别","年龄", "剔除标签","是否更新入组策略","MDW", "Adjudicator1_Sepsis2", "Adjudicator1_Sepsis3","Adjudicator2_Sepsis2", "Adjudicator2_Sepsis3","Arbitrator_Sepsis2", "Arbitrator_Sepsis3")
 
-write.xlsx(arrange(res_stat, Subject),  "Sepsis_STAT_Chi.xlsx",  colNames = TRUE)
+colnames(res_stat)=c("SITE","SUBJID", "SEX","AGE", "REMOVE","MDW", "CECAJD1_SFDIAGA", "CECAJD1_FSDIAGARB","CECAJD2_SFDIAGA", "CECAJD2_FSDIAGARB","CECABTT_SFDIAGA", "CECABTT_FSDIAGARB")
 
-res_stat2 = res_stat %>% mutate_at("Site",trans_site) %>% 
-            mutate_at(c("Adjudicator1_Sepsis2", "Adjudicator1_Sepsis3","Adjudicator2_Sepsis2", "Adjudicator2_Sepsis3","Arbitrator_Sepsis2", "Arbitrator_Sepsis3"),trans_chi) 
+write.xlsx(arrange(res_stat, SUBJID),  "CHN-097_STAT_Chi.xlsx",  colNames = TRUE)
 
-write.xlsx(arrange(res_stat2, Subject),  "Sepsis_STAT_Eng.xlsx",  colNames = TRUE)
+res_stat2 = res_stat %>% mutate_at("SITE",trans_site) %>% 
+            mutate_at(c("CECAJD1_SFDIAGA", "CECAJD1_FSDIAGARB","CECAJD2_SFDIAGA", "CECAJD2_FSDIAGARB","CECABTT_SFDIAGA", "CECABTT_FSDIAGARB"),trans_chi) 
+
+write.xlsx(arrange(res_stat2, SUBJID),  "CHN-097_STAT_Eng.xlsx",  colNames = TRUE)
 
 ##check
 #res_com = res_stat2 %>%  right_join(lising_join, by = "Subject") %>% 
