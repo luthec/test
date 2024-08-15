@@ -1,5 +1,5 @@
 library(readxl)
-library(mice)
+#library(mice)
 library(tableone)
 library(dplyr)
 library(ggpubr)
@@ -128,6 +128,13 @@ h1 = ComplexHeatmap::Heatmap(empyrosis_select[,c("TBSA","烧伤指数","III度")
                         col = rev(brewer.pal(10,"RdBu"))
                         )
 
+tableOne0 <- CreateTableOne(vars = colnames(select(test_datasets2, -c("病案号","姓名","体重（kg","主要结局：耐受0，不耐受1","原因","费用","并发症","HCTdALB","吸入性损伤...46"))), 
+                           strata = c("主要结局：耐受0，不耐受1"), 
+                           data = test_datasets %>% select("年龄","体重（kg","身高m","BMI","主要结局：耐受0，不耐受1","首次进水时间h）"))
+
+tb0 = print(tableOne0)     
+
+
 
 tableOne1 <- CreateTableOne(vars = colnames(select(test_datasets2, -c("病案号","姓名","体重（kg","主要结局：耐受0，不耐受1","原因","费用","并发症","HCTdALB","吸入性损伤...46"))), 
                            strata = c("主要结局：耐受0，不耐受1"), 
@@ -153,9 +160,7 @@ tableOne2 <- CreateTableOne(vars = colnames(dplyr::select(empyrosis_index, -c("�
 
 tb2 = print(tableOne2)   
 
-
-
-outpdf=paste("Table1","_non.pdf",sep='')
+outpdf=paste("Table1","_non2.pdf",sep='')
 pdf(outpdf, width = 16, height = 10, family="GB1")
 
 grid.newpage()
@@ -175,10 +180,11 @@ pushViewport(viewport(layout = grid.layout(nr = 1, nc = 2)))
       popViewport()
 popViewport(0)
 
-
+t0 <- ggtexttable(as.data.frame(tb0), theme = ttheme("light"))    
 t1 <- ggtexttable(as.data.frame(tb1), theme = ttheme("light",base_size = 6,padding = unit(c(4, 4), "mm")))
 t2 <- ggtexttable(as.data.frame(tb2), theme = ttheme("light"))      
 
+print(t0)
 print(t1)
 print(t2)
 
@@ -230,7 +236,7 @@ t.mem.select <- model_index(fit.mem.select ,biomarker,"Mix Model with Select var
 
 # ROC curve for first model
 
-validate_datasets <- read_excel("validate_datasets.xlsx")
+validate_datasets <- read_excel("validated_datasets2.xlsx")
 
 dt_test= validate_datasets %>%
    mutate(HCTdALB = validate_datasets$`@1d_hct`/validate_datasets$`@1d_ALB`) %>% 
