@@ -178,12 +178,12 @@ ITGA4.nonexp.Tcells.spe.names = subset(tcells.cluster[,tcells.cluster$label == "
 
 Immune_supress.Bcells.spe.names = subset(bcells.cluster[,bcells.cluster$label == "CLL"], idents = c("5","6","8","9"), invert = TRUE)  %>% 
                                   subset(,subset = TGFB1 > 0) %>%
-                                  subset(, downsample = 100) %>%
+                                  subset(, downsample = 200) %>%
                                   colnames()
 
 Immune_nonsupress.Bcells.spe.names = subset(bcells.cluster[,bcells.cluster$label == "CLL"], idents = c("5","6","8","9"), invert = TRUE)  %>% 
                                   subset(,subset = TGFB1 <= 0) %>%
-                                  subset(, downsample = 100) %>%
+                                  subset(, downsample = 200) %>%
                                   colnames()                                  
 
 objs$celltype<- case_when(colnames(objs) %in% ITGA4.exp.Tcells.spe.names ~ paste0(objs$label,"_CD8+ITGA4+_Tcells"),
@@ -302,7 +302,22 @@ netVisual_circle(cellchat@net$count, vertex.weight = groupSize,
 netVisual_circle(cellchat@net$weight, vertex.weight = groupSize, 
                  weight.scale = T, label.edge= F, title.name = "Interaction weights/strength")
 
+mat <- cellchat@net$weight
+par(mfrow = c(2,2), xpd=TRUE)
+for (i in 1:nrow(mat)) {
+  mat2 <- matrix(0, nrow = nrow(mat), ncol = ncol(mat), dimnames = dimnames(mat))
+  mat2[i, ] <- mat[i, ]
+  netVisual_circle(mat2, vertex.weight = groupSize, weight.scale = T, edge.weight.max = max(mat), title.name = rownames(mat)[i])
+}
 
+
+
+cellchat@netP$pathways
+pathways.show <- c("PARs")  
+
+vertex.receiver = c(1,2,3,4) 
+
+netVisual_aggregate(cellchat, signaling = pathways.show, vertex.receiver = vertex.receiver,layout = "hierarchy")
 
 
 
