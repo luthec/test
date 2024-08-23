@@ -11,7 +11,7 @@ library(patchwork)
 library(MAST)
 library(irGSEA)
 plan("multicore", workers = 4)
-
+options(future.globals.maxSize = 50000 * 1024^2)
 
 
 SCT_intergration <- function(assay_list,n_dim=20) {  
@@ -85,7 +85,7 @@ objs <- objs %>% NormalizeData() %>%
         
 ####integration 1
 DefaultAssay(objs) <- 'RNA'      
-options(future.globals.maxSize = 50000 * 1024^2)
+
 objs <- objs  %>% SCTransform() 
 objs <- IntegrateLayers(
             object = objs,
@@ -270,7 +270,7 @@ cellchat@data.project[1:4,1:4]
 
 cellchat@LR
 
-cellchat <- computeCommunProb(cellchat, raw.use = TRUE, population.size = TRUE) 
+cellchat <- computeCommunProb(cellchat, raw.use = TRUE, population.size = TRUE,nboot = 20) 
 # Filter out the cell-cell communication if there are only few number of cells in certain cell groups
 cellchat <- filterCommunication(cellchat, min.cells = 10)
 
