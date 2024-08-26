@@ -178,12 +178,12 @@ ITGA4.nonexp.Tcells.spe.names = subset(tcells.cluster[,tcells.cluster$label == "
 
 Immune_supress.Bcells.spe.names = subset(bcells.cluster[,bcells.cluster$label == "CLL"], idents = c("5","6","8","9"), invert = TRUE)  %>% 
                                   subset(,subset = TGFB1 > 0) %>%
-                                  subset(, downsample = 200) %>%
+                                  # subset(, downsample = 200) %>%
                                   colnames()
 
 Immune_nonsupress.Bcells.spe.names = subset(bcells.cluster[,bcells.cluster$label == "CLL"], idents = c("5","6","8","9"), invert = TRUE)  %>% 
                                   subset(,subset = TGFB1 <= 0) %>%
-                                  subset(, downsample = 200) %>%
+                                  # subset(, downsample = 200) %>%
                                   colnames()                                  
 
 objs$celltype<- case_when(colnames(objs) %in% ITGA4.exp.Tcells.spe.names ~ paste0(objs$label,"_CD8+ITGA4+_Tcells"),
@@ -237,13 +237,13 @@ cellchat <- createCellChat(object = objs[ ,!is.na(objs$celltype)], group.by = "c
 CellChatDB$interaction$annotation %>% unique()
 # [1] "Secreted Signaling" "ECM-Receptor"       "Cell-Cell Contact" 
 
-CellChatDB.use <- subsetDB(CellChatDB, search = "Secreted Signaling", key = "annotation") # use Secreted Signaling
+# CellChatDB.use <- subsetDB(CellChatDB, search = "Secreted Signaling", key = "annotation") # use Secreted Signaling
 
 # Only uses the Secreted Signaling from CellChatDB v1
-#  CellChatDB.use <- subsetDB(CellChatDB, search = list(c("Secreted Signaling"), c("CellChatDB v1")), key = c("annotation", "version"))
+CellChatDB.use <- subsetDB(CellChatDB, search = list(c("Secreted Signaling"), c("CellChatDB v1"),c("TGFb")), key = c("annotation", "version","pathway_name"))
 
 # use all CellChatDB except for "Non-protein Signaling" for cell-cell communication analysis
-CellChatDB.use <- subsetDB(CellChatDB)
+# CellChatDB.use <- subsetDB(CellChatDB)
 
 
 # use all CellChatDB for cell-cell communication analysis
