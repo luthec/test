@@ -125,11 +125,11 @@ trans_site <- function(x){
 }
 
 res_stat = res_dat %>% 
-      select(matches("Site")[1],Subject,"Demographic Information of Patients_SEX_STD","Demographic Information of Patients_AGE",Label,Diff_MDW_Value,"CEC Adjudicator 1_SFDIAGA","CEC Adjudicator 1_FSDIAGARB","CEC Adjudicator 2_SFDIAGA","CEC Adjudicator 2_FSDIAGARB","CEC Arbitrator_SFDIAGA","CEC Arbitrator_FSDIAGARB") 
+      select(matches("Site")[1],Subject,"Demographic Information of Patients_SEX_STD","Demographic Information of Patients_AGE","Enrollment_ENROLLYN_STD",Label,Diff_MDW_Value,"CEC Adjudicator 1_SFDIAGA","CEC Adjudicator 1_FSDIAGARB","CEC Adjudicator 2_SFDIAGA","CEC Adjudicator 2_FSDIAGARB","CEC Arbitrator_SFDIAGA","CEC Arbitrator_FSDIAGARB") 
 
 # colnames(res_stat)=c("Site","Subject", "性别","年龄", "剔除标签","是否更新入组策略","MDW", "Adjudicator1_Sepsis2", "Adjudicator1_Sepsis3","Adjudicator2_Sepsis2", "Adjudicator2_Sepsis3","Arbitrator_Sepsis2", "Arbitrator_Sepsis3")
 
-colnames(res_stat)=c("SITE","SUBJID", "SEX","AGE", "REMOVE","MDW", "CECAJD1_SFDIAGA", "CECAJD1_FSDIAGARB","CECAJD2_SFDIAGA", "CECAJD2_FSDIAGARB","CECABTT_SFDIAGA", "CECABTT_FSDIAGARB")
+colnames(res_stat)=c("SITE","SUBJID", "SEX","AGE","ENROLLYN","REMOVE","MDW", "CECAJD1_SFDIAGA", "CECAJD1_FSDIAGARB","CECAJD2_SFDIAGA", "CECAJD2_FSDIAGARB","CECABTT_SFDIAGA", "CECABTT_FSDIAGARB")
 
 write.xlsx(arrange(res_stat, SUBJID),  "CHN-097_STAT_Chi.xlsx",  colNames = TRUE)
 
