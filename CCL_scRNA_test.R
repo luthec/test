@@ -160,11 +160,31 @@ tcells.cluster = Clustering_Cells(objs.tcells,"integrated.cca")
 objs.bcells <- subset(x = objs, subset =MS4A1 > 0 | CD79A > 0 | CD19 > 0| IGHG1 > 0)
 bcells.cluster = Clustering_Cells(objs.bcells,"integrated.cca")
 
-##cell annotation
-library(HGNChelper)
-source("https://raw.githubusercontent.com/kris-nader/sc-type/master/R/sctype_wrapper.R"); 
 
-tcells.cluster <- run_sctype(tcells.cluster, known_tissue_type="Immune system",custom_marker_file="C:/Users/tliu05/Desktop/2023projects/01_DS/jiangsu/cell_annotation/ScTypeDB_full.xlsx",name="sctype_classification",plot=TRUE)
+#######figure
+p1 <- DimPlot(tcells.cluster, reduction = "umap", group.by = "orig.ident")
+p2 <- DimPlot(tcells.cluster, reduction = "umap", label = TRUE, repel = TRUE)
+
+p3 <- DimPlot(tcells.cluster, reduction = "umap", split.by = "label", label = TRUE)
+p4 <- FeaturePlot(tcells.cluster, reduction = "umap",features = c('CD8A','CD4','CD3D', 'CD3E', 'CD3G','CD2'), min.cutoff = "q9")
+p42 <- FeaturePlot(tcells.cluster, reduction = "umap",features = c("ITGA4","BCL2"), min.cutoff = "q9")
+
+##cell annotation
+# library(HGNChelper)
+# source("https://raw.githubusercontent.com/kris-nader/sc-type/master/R/sctype_wrapper.R"); 
+
+# tcells.cluster <- run_sctype(tcells.cluster, known_tissue_type="Immune system",custom_marker_file="C:/Users/tliu05/Desktop/2023projects/01_DS/jiangsu/cell_annotation/ScTypeDB_full.xlsx",name="sctype_classification",plot=TRUE)
+# p43 <- DimPlot(tcells.cluster, reduction = "umap", group.by = "sctype_classification")
+
+
+
+p5 <- DimPlot(bcells.cluster, reduction = "umap", group.by = "orig.ident")
+p6 <- DimPlot(bcells.cluster, reduction = "umap", label = TRUE, repel = TRUE)
+p7 <- DimPlot(bcells.cluster, reduction = "umap", split.by = "label", label = TRUE)
+
+p8 <- FeaturePlot(bcells.cluster, reduction = "umap",features = c("MS4A1","CD79A","CD19","IGHG1"), min.cutoff = "q9")
+p9 <- FeaturePlot(bcells.cluster, reduction = "umap",features = c("TGFB1","IL10","PDCD1","CTLA4","HAVCR2"), min.cutoff = "q9")
+
 
 ## grep(pattern = "^IL", x = rownames(bcells.cluster), value = TRUE)
 
@@ -176,20 +196,32 @@ ITGA4.exp.Tcells.spe.names = subset(tcells.cluster[,tcells.cluster$label == "CLL
 
 ITGA4.nonexp.Tcells.spe.names = subset(tcells.cluster[,tcells.cluster$label == "CLL"], idents = "5",subset =( CD8A > 0 | CD8B > 0) & ITGA4 <= 0 ) %>% colnames()
 
-Immune_supress.Bcells.spe.names = subset(bcells.cluster[,bcells.cluster$label == "CLL"], idents = c("5","6","8","9"), invert = TRUE)  %>% 
-                                  subset(,subset = TGFB1 > 0) %>%
-                                  # subset(, downsample = 200) %>%
+Immune_supress.TGFB1.Bcells.spe.names = subset(bcells.cluster[,bcells.cluster$label == "CLL"], idents = c("5","6","8","9"), invert = TRUE)  %>% 
+                                  subset(,subset = TGFB1 > 0 ) %>%
+                                  subset(, downsample = 200) %>%
                                   colnames()
 
-Immune_nonsupress.Bcells.spe.names = subset(bcells.cluster[,bcells.cluster$label == "CLL"], idents = c("5","6","8","9"), invert = TRUE)  %>% 
-                                  subset(,subset = TGFB1 <= 0) %>%
+Immune_supress.PD1.Bcells.spe.names = subset(bcells.cluster[,bcells.cluster$label == "CLL"], idents = c("5","6","8","9"), invert = TRUE)  %>% 
+                                  subset(,subset = PDCD1 >0 ) %>%
+                                  # subset(, downsample = 200) %>%
+                                  colnames()  
+
+Immune_supress.CTLA4.Bcells.spe.names = subset(bcells.cluster[,bcells.cluster$label == "CLL"], idents = c("5","6","8","9"), invert = TRUE)  %>% 
+                                  subset(,subset = CTLA4 >0 ) %>%
+                                  # subset(, downsample = 200) %>%
+                                  colnames()  
+
+Immune_supress.TIM3.Bcells.spe.names = subset(bcells.cluster[,bcells.cluster$label == "CLL"], idents = c("5","6","8","9"), invert = TRUE)  %>% 
+                                  subset(,subset = HAVCR2 >0 ) %>%
                                   # subset(, downsample = 200) %>%
                                   colnames()                                  
+objs$celltype<- NULL
 
 objs$celltype<- case_when(colnames(objs) %in% ITGA4.exp.Tcells.spe.names ~ paste0(objs$label,"_CD8+ITGA4+_Tcells"),
                           colnames(objs) %in% ITGA4.nonexp.Tcells.spe.names ~ paste0(objs$label,"_CD8+ITGA4-_Tcells"),     
-                          colnames(objs) %in% Immune_supress.Bcells.spe.names ~ paste0(objs$label,"_TGFB1+_Bcells"),
-                          colnames(objs) %in% Immune_nonsupress.Bcells.spe.names ~ paste0(objs$label,"_TGFB1-_Bcells"))
+                          colnames(objs) %in% Immune_supress.PD1.Bcells.spe.names ~ paste0(objs$label,"_PD1+_Bcells"),
+                          colnames(objs) %in% Immune_supress.CTLA4.Bcells.spe.names ~ paste0(objs$label,"_CTLA4+_Bcells"),
+                          colnames(objs) %in% Immune_supress.TIM3.Bcells.spe.names ~ paste0(objs$label,"_TIM3+_Bcells"))
 
 
 # print(table(objs2$celltype))
@@ -239,11 +271,13 @@ CellChatDB$interaction$annotation %>% unique()
 
 # CellChatDB.use <- subsetDB(CellChatDB, search = "Secreted Signaling", key = "annotation") # use Secreted Signaling
 
-# Only uses the Secreted Signaling from CellChatDB v1
-CellChatDB.use <- subsetDB(CellChatDB, search = list(c("Secreted Signaling"), c("CellChatDB v1"),c("TGFb")), key = c("annotation", "version","pathway_name"))
+# Only uses specific pathway
+# CellChatDB.use <- subsetDB(CellChatDB, search = list(c("Secreted Signaling"), c("CellChatDB v1"),c("TGFb")), key = c("annotation", "version","pathway_name"))
 
+#gene="ITGA4"
+#CellChatDB.use <- subsetDB(CellChatDB, search = list(c(gene),c(gene)), key = c("ligand.symbol","receptor.symbol"))
 # use all CellChatDB except for "Non-protein Signaling" for cell-cell communication analysis
-# CellChatDB.use <- subsetDB(CellChatDB)
+CellChatDB.use <- subsetDB(CellChatDB)
 
 
 # use all CellChatDB for cell-cell communication analysis
@@ -265,8 +299,8 @@ cellchat <- identifyOverExpressedGenes(cellchat)
 cellchat <- identifyOverExpressedInteractions(cellchat)
 
 #project gene expression data onto PPI (Optional: when running it, USER should set `raw.use = FALSE` in the function `computeCommunProb()` in order to use the projected data)
-cellchat <- projectData(cellchat, PPI.human)
-cellchat@data.project[1:4,1:4]
+#cellchat <- projectData(cellchat, PPI.human)
+#cellchat@data.project[1:4,1:4]
 
 cellchat@LR
 
@@ -293,55 +327,8 @@ cellchat <- computeCommunProbPathway(cellchat)
 #计算整合的细胞类型之间通信结果
 cellchat <- aggregateNet(cellchat)
 
-####画图
 
-groupSize <- as.numeric(table(cellchat@idents))
-par(mfrow = c(1,2), xpd=TRUE)
-netVisual_circle(cellchat@net$count, vertex.weight = groupSize, 
-                 weight.scale = T, label.edge= F, title.name = "Number of interactions")
-netVisual_circle(cellchat@net$weight, vertex.weight = groupSize, 
-                 weight.scale = T, label.edge= F, title.name = "Interaction weights/strength")
-
-mat <- cellchat@net$weight
-par(mfrow = c(2,2), xpd=TRUE)
-for (i in 1:nrow(mat)) {
-  mat2 <- matrix(0, nrow = nrow(mat), ncol = ncol(mat), dimnames = dimnames(mat))
-  mat2[i, ] <- mat[i, ]
-  netVisual_circle(mat2, vertex.weight = groupSize, weight.scale = T, edge.weight.max = max(mat), title.name = rownames(mat)[i])
-}
-
-
-
-cellchat@netP$pathways
-pathways.show <- c("PARs")  
-
-vertex.receiver = c(1,2,3,4) 
-
-netVisual_aggregate(cellchat, signaling = pathways.show, vertex.receiver = vertex.receiver,layout = "hierarchy")
-
-
-
-
-#######figure
-p1 <- DimPlot(tcells.cluster, reduction = "umap", group.by = "orig.ident")
-p2 <- DimPlot(tcells.cluster, reduction = "umap", label = TRUE, repel = TRUE)
-
-p3 <- DimPlot(tcells.cluster, reduction = "umap", split.by = "label", label = TRUE)
-p4 <- FeaturePlot(tcells.cluster, reduction = "umap",features = c('CD8A','CD4','CD3D', 'CD3E', 'CD3G','CD2'), min.cutoff = "q9")
-p42 <- FeaturePlot(tcells.cluster, reduction = "umap",features = c("ITGA4","BCL2"), min.cutoff = "q9")
-p43 <- DimPlot(tcells.cluster, reduction = "umap", group.by = "sctype_classification")
-
-
-
-p5 <- DimPlot(bcells.cluster, reduction = "umap", group.by = "orig.ident")
-p6 <- DimPlot(bcells.cluster, reduction = "umap", label = TRUE, repel = TRUE)
-p7 <- DimPlot(bcells.cluster, reduction = "umap", split.by = "label", label = TRUE)
-
-p8 <- FeaturePlot(bcells.cluster, reduction = "umap",features = c("MS4A1","CD79A","CD19","IGHG1"), min.cutoff = "q9")
-p9 <- FeaturePlot(bcells.cluster, reduction = "umap",features = c("TGFB1","IL10"), min.cutoff = "q9")
-
-
-outpdf=paste("UMAP","_all.pdf",sep='')
+outpdf=paste("CLL","_all.pdf",sep='')
 pdf(outpdf, width = 16, height = 10)
 
 wrap_plots(c(p01, p02, p03), ncol = 2)
@@ -350,7 +337,7 @@ print(p1+p2)
 print(p3)
 print(p4)
 print(p42)
-print(p43)
+# print(p43)
 
 VlnPlot(tcells.cluster, features = c("CD8A"))
 VlnPlot(tcells.cluster, features = c("CD4"))
@@ -361,6 +348,45 @@ print(p5+p6)
 print(p7)
 print(p8)
 print(p9)
+
+
+####cellchat画图
+
+groupSize <- as.numeric(table(cellchat@idents))
+par(mfrow = c(1,2), xpd=TRUE)
+netVisual_circle(cellchat@net$count, vertex.weight = groupSize, 
+                 weight.scale = T, label.edge= F, title.name = "Number of interactions")
+netVisual_circle(cellchat@net$weight, vertex.weight = groupSize, 
+                 weight.scale = T, label.edge= F, title.name = "Interaction weights/strength")
+
+mat <- cellchat@net$weight
+par(mfrow = c(2,3), xpd=TRUE)
+for (i in 1:nrow(mat)) {
+  mat2 <- matrix(0, nrow = nrow(mat), ncol = ncol(mat), dimnames = dimnames(mat))
+  mat2[i, ] <- mat[i, ]
+  netVisual_circle(mat2, vertex.weight = groupSize, weight.scale = T, edge.weight.max = max(mat), title.name = rownames(mat)[i])
+}
+
+
+vertex.receiver = c(3,4,5) 
+vertex.sender = c(1,2)
+
+for(i in 1:length(cellchat@netP$pathways)) {
+pathways.show=cellchat@netP$pathways[i]
+par(mfrow=c(1,1))
+plotGeneExpression(cellchat, signaling = pathways.show) %>% print()
+par(mfrow=c(1,1))
+netVisual_aggregate(cellchat, signaling = pathways.show, vertex.receiver = vertex.receiver,layout = "hierarchy")
+par(mfrow=c(1,1))
+netVisual_aggregate(cellchat, signaling = pathways.show,  vertex.receiver = vertex.receiver)
+par(mfrow=c(1,1))
+netVisual_aggregate(cellchat, signaling = pathways.show, layout = "chord")
+}
+
+par(mfrow=c(1,1))
+netVisual_bubble(cellchat, sources.use = vertex.sender, targets.use = vertex.receiver, remove.isolate = FALSE)
+par(mfrow=c(1,1))
+netVisual_bubble(cellchat, sources.use = vertex.receiver, targets.use = vertex.sender, remove.isolate = FALSE)
 
 dev.off()
 
