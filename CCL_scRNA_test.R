@@ -45,6 +45,7 @@ subset(spe.obj,features=setdiff(rownames(spe.obj),tar.gene ))
 }
 
 
+
 ##########start
 
 
@@ -187,6 +188,24 @@ p9 <- FeaturePlot(bcells.cluster, reduction = "umap",features = c("TGFB1","IL10"
 
 
 ## grep(pattern = "^IL", x = rownames(bcells.cluster), value = TRUE)
+
+
+
+###de
+
+tcells.cluster.5.de = FindAllMarkers(subset(x = tcells.cluster, idents = "5"),only.pos = TRUE, assay="SCT" ,test.use = "MAST",recorrect_umi = FALSE) 
+
+
+
+
+
+
+
+
+
+
+
+
 
 ##cell chat
 
