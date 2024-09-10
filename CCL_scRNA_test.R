@@ -191,18 +191,46 @@ p9 <- FeaturePlot(bcells.cluster, reduction = "umap",features = c("TGFB1","IL10"
 
 
 
-###de
+###cell identification
 
-tcells.cluster.5.de = FindAllMarkers(subset(x = tcells.cluster, idents = "5"),only.pos = TRUE, assay="SCT" ,test.use = "MAST",recorrect_umi = FALSE) 
+tcells.cluster.markers <- tcells.cluster %>% PrepSCTFindMarkers() %>% FindAllMarkers(, only.pos = TRUE,recorrect_umi=FALSE)
+
+select_clusters=c(1,3,5,7)
+
+tcells.cluster.markers %>%
+    group_by(cluster) %>%
+    # dplyr::filter(cluster %in% select_clusters) %>%
+    dplyr::filter(avg_log2FC > 1) %>%
+    slice_head(n = 20) %>%
+    ungroup() -> top20
+
+pm0 <- DoHeatmap(subset(x = tcells.cluster, idents = select_clusters), features = top20$gene) 
 
 
 
+#### Identify   cell type  
+
+library(celldex)
+library(SingleR)
+hpc <- celldex::HumanPrimaryCellAtlasData() 
+# hpc <- get(load("../single_ref/ref_Human_all.RData"))
+library(BiocParallel)
+pred.tcells.cluste <- SingleR(test = tcells.cluster@assays$SCT@data, 
+                      ref = hpc,
+                      labels = hpc$label.main, 
+                      clusters = tcells.cluster@active.ident)
+
+p33 = plotScoreHeatmap(pred.tcells.cluste, clusters=pred.tcells.cluste@rownames, fontsize.row = 9,show_colnames = T)
 
 
+outpdf=paste("CLL","_Tcells.pdf",sep='')
+pdf(outpdf, width = 16, height = 10)
 
+print(pm0)
+grid::grid.newpage()
+print(p33)
 
-
-
+dev.off()
 
 
 
