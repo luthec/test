@@ -39,4 +39,4 @@ mat %>% mutate(consec_id = consecutive_id(筛选编号)) %>%
 
 write_excel_csv(read_excel(dir()[1], skip = 2)  %>% query() ,  paste0(dir()[1],"_queries.csv"))
 
-write_excel_csv(read_excel(dir()[3], skip = 2)  %>% query() ,  paste0(dir()[3],"_queries.csv"))
+write_excel_csv(read_excel(dir()[2], skip = 2)  %>% query() ,  paste0(dir()[2],"_queries.csv"))
