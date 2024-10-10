@@ -357,13 +357,14 @@ create_output_table(compare_df(arrange(mat1 %>% filter(SampleID %in% inter_sampl
 ins = read_csv(dir()[3])
 
 predicate = read_csv(dir()[1],quote = "") %>% 
-            rename(SampleID="Sample ID")
+            rename(SampleID="Sample ID") %>% 
+            mutate_at(c('SampleID'), as.character)
 
 
 markers=c("Myoglobin_IUO")
 
 mat1 = ins %>% filter(TestName %in% markers) %>% 
-            filter(SampleID %in% c(173001:173073))  %>% 
+            filter(SampleID %in% c(173001:173116))  %>% 
             left_join(predicate  %>% filter(`Test Name`=="MYO"),by="SampleID") %>% 
             select(SampleID,DoseResult,Result)
 
@@ -383,18 +384,54 @@ inter_samples=intersect(mat1$SampleID,mat2$SampleID)
 create_output_table(compare_df(arrange(mat1 %>% filter(SampleID %in% inter_samples) , SampleID),arrange(mat2 %>% filter(SampleID %in% inter_samples) , SampleID)), output_type = 'xlsx', file_name = paste0(markers[1],"_queries.xlsx"))
 
 
-#######Insulin
+#######TPOAb
 
-ins = read_csv(dir()[3])
+ins = read_csv(dir()[3]) %>% 
+            mutate_at(c('SampleID'), as.character)
 
 predicate = read_csv(dir()[1],quote = "") %>% 
-            rename(SampleID="Sample ID")
+            rename(SampleID="Sample ID") %>% 
+            mutate_at(c('SampleID'), as.character)
+
+
+markers=c("TPOAb","TPOAb_IUO")
+
+mat1 = ins %>% filter(TestName %in% markers) %>% 
+            filter(SampleID %in% c(228001:228140))  %>% 
+            left_join(predicate  %>% filter(`Test Name`=="TPOAb"),by="SampleID") %>% 
+            select(SampleID,DoseResult,Result)
+
+# write_excel_csv(ins %>% filter(TestName %in% markers) %>% select(SampleID,TestName,DoseResult),  paste0(markers[1],"_wrongnumbers.csv"))
+
+mat2 = read_excel(dir()[2], skip = 2) %>% 
+          rename(SampleID="唯一可溯源编号") %>% 
+          rename(DoseResult="DxI 9000仪器检测结果\r\n检测结果（IU/mL）") %>%
+          rename(Result="Access 2仪器检测结果\r\n检测结果（IU/mL）") %>%
+          select(SampleID,DoseResult,Result) %>%
+          mutate_at(c('SampleID'), as.character)
+
+
+
+inter_samples=intersect(mat1$SampleID,mat2$SampleID)
+
+create_output_table(compare_df(arrange(mat1 %>% filter(SampleID %in% inter_samples) , SampleID),arrange(mat2 %>% filter(SampleID %in% inter_samples) , SampleID)), output_type = 'xlsx', file_name = paste0(markers[1],"_queries.xlsx"))
+
+
+
+#######Insulin
+
+ins = read_csv(dir()[3]) %>% 
+            mutate_at(c('SampleID'), as.character)
+
+predicate = read_csv(dir()[1],quote = "") %>% 
+            rename(SampleID="Sample ID") %>% 
+            mutate_at(c('SampleID'), as.character)
 
 
 markers=c("Insulin_IUO")
 
 mat1 = ins %>% filter(TestName %in% markers) %>% 
-            filter(SampleID %in% c(226001:226079))  %>% 
+            filter(SampleID %in% c(226001:226109))  %>% 
             left_join(predicate  %>% filter(`Test Name`=="Insulin"),by="SampleID") %>% 
             select(SampleID,DoseResult,Result)
 
@@ -403,14 +440,15 @@ mat1 = ins %>% filter(TestName %in% markers) %>%
 
 mat2 = read_excel(dir()[2], skip = 2) %>% 
           rename(SampleID="唯一可溯源编号") %>% 
-          rename(DoseResult="DxI 9000仪器检测结果\r\n检测结果（ µIU/mL）") %>%
-          rename(Result="Access 2仪器检测结果\r\n检测结果（ µIU/mL）") %>%
+          rename(DoseResult="DxI 9000仪器检测结果\r\n检测结果（µIU/mL）") %>%
+          rename(Result="Access 2仪器检测结果\r\n检测结果（µIU/mL）") %>%
           select(SampleID,DoseResult,Result) %>%
           mutate_at(c('SampleID'), as.character)
 
 inter_samples=intersect(mat1$SampleID,mat2$SampleID)
 
 create_output_table(compare_df(arrange(mat1 %>% filter(SampleID %in% inter_samples) , SampleID),arrange(mat2 %>% filter(SampleID %in% inter_samples) , SampleID)), output_type = 'xlsx', file_name = paste0(markers[1],"_queries.xlsx"))
+
 
 #######Ferritin
 
@@ -424,7 +462,7 @@ predicate = read_csv(dir()[1],quote = "") %>%
 markers=c("Ferritin_IUO")
 
 mat1 = ins %>% filter(TestName %in% markers) %>% 
-            filter(SampleID %in% c(159001:159063))  %>% 
+            filter(SampleID %in% c(159001:159115))  %>% 
             left_join(predicate  %>% filter(`Test Name`=="Ferritin"),by="SampleID") %>% 
             select(SampleID,DoseResult,Result)
 
