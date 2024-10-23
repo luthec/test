@@ -104,10 +104,10 @@ res_dat = res_t %>% drop_na(Subject) %>%
 res_b = res_dat %>% 
       select(matches("Site")[1],Subject,"Demographic Information of Patients_SEX_STD","Demographic Information of Patients_AGE","Enrollment_ENROLLYN_STD",Label,Diff_MDW_Value,"CEC Adjudicator 1_SFDIAGA","CEC Adjudicator 1_FSDIAGARB","CEC Adjudicator 2_SFDIAGA","CEC Adjudicator 2_FSDIAGARB","CEC Arbitrator_SFDIAGA","CEC Arbitrator_FSDIAGARB",
       "Pre-existing Conditions_ED01_STD","Pre-existing Conditions_ED02_STD","Pre-existing Conditions_ED03_STD","Pre-existing Conditions_ED04_STD","Pre-existing Conditions_ED05_STD","Pre-existing Conditions_ED06_STD","Pre-existing Conditions_ED07_STD","Pre-existing Conditions_ED08_STD","Pre-existing Conditions_ED09_STD",
-      "Past Medical History_HEMATYN_STD","Past Medical History_CARDI05","Past Medical History_GENIT02","Past Medical History_RESPI02","Past Medical History_META04","Past Medical History_GASTR02","Past Medical History_AUTOIM03","Past Medical History_RENAL03","Past Medical History_HEPATI03","Past Medical History_ORTOHSPC",
-      "Bacterial Testing Log_SEROYN_STD","Bacterial Testing Log_SERORSLT_STD","Bacterial Testing Log_SEROCUL_STD","Bacterial Testing Log_SOURCE_STD",matches("Bacterial Testing Log_SOURCEPN_STD"),matches("Bacterial Testing Log_GRAMSTN_STD"),
-      # "Bacterial Testing Log_FUNGALYN_STD","Bacterial Testing Log_FUNGALRE","Bacterial Testing Log_VIRALYN_STD","Bacterial Testing Log_VIRALRES","Bacterial Testing Log_VIRAL14",
-      "Other Culture and Rapid Test_OTHINOYN_STD","Other Culture and Rapid Test_OTHTOID","Other Culture and Rapid Test_RAPIDTYN_STD","Other Culture and Rapid Test_RAPIDTRE"
+      "Past Medical History_HEMATYN_STD","Past Medical History_CARDI05","Past Medical History_GENIT02","Past Medical History_RESPI02","Past Medical History_META04","Past Medical History_CNS06","Past Medical History_GASTR02","Past Medical History_AUTOIM03","Past Medical History_RENAL03","Past Medical History_HEPATI03","Past Medical History_ORTOHSPC",
+      "Other Culture and Rapid Test_VIRAL14",
+      "Bacterial Testing Log_SEROYN_STD","Bacterial Testing Log_SERORSLT_STD","Bacterial Testing Log_SEROCUL_STD","Bacterial Testing Log_SOURCE_STD",matches("Bacterial Testing Log_SOURCEPN_STD"), # matches("Bacterial Testing Log_GRAMSTN_STD"),
+      "Other Culture and Rapid Test_FUNGALYN_STD","Other Culture and Rapid Test_FUNGALRE","Other Culture and Rapid Test_VIRALYN_STD","Other Culture and Rapid Test_VIRALRES","Other Culture and Rapid Test_OTHINOYN_STD","Other Culture and Rapid Test_OTHTRE","Other Culture and Rapid Test_RAPIDTYN_STD","Other Culture and Rapid Test_RAPIDTRE"
       )  %>% mutate_if(is.list,as.character)
 
 colnames(res_b)[1:13]=c("SITE","SUBJID", "SEX","AGE","ENROLLYN","REMOVE","MDW", "CECAJD1_SFDIAGA", "CECAJD1_FSDIAGARB","CECAJD2_SFDIAGA", "CECAJD2_FSDIAGARB","CECABTT_SFDIAGA", "CECABTT_FSDIAGARB")
