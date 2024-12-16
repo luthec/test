@@ -479,3 +479,29 @@ mat2 = read_excel(dir()[2], skip = 2,col_types ="text") %>%
 inter_samples=intersect(mat1$SampleID,mat2$SampleID)
 
 create_output_table(compare_df(arrange(mat1 %>% filter(SampleID %in% inter_samples) , SampleID),arrange(mat2 %>% filter(SampleID %in% inter_samples) , SampleID)), output_type = 'xlsx', file_name = paste0(markers[1],"_queries.xlsx"))
+
+
+####single HBC
+
+ins = read_csv(dir()[2])
+
+
+markers=c("aHBc_IUO")
+
+mat1 = ins %>% filter(TestName %in% markers) %>% 
+            filter(SampleID %in% c(238001:238250))  %>% 
+            select(SampleID,DoseResult)
+
+# write_excel_csv(ins %>% filter(TestName %in% markers) %>% select(SampleID,TestName,DoseResult),  paste0(markers[1],"_wrongnumbers.csv"))
+
+
+mat2 = read_excel(dir()[1], col_types ="text") %>% 
+          rename(SampleID="唯一可溯源编号") %>% 
+          rename(DoseResult="DXI9000检测结果") %>%
+          select(SampleID,DoseResult) %>%
+          mutate_at(c('SampleID'), as.character)
+
+inter_samples=intersect(mat1$SampleID,mat2$SampleID)
+
+create_output_table(compare_df(arrange(mat1 %>% filter(SampleID %in% inter_samples) , SampleID),arrange(mat2 %>% filter(SampleID %in% inter_samples) , SampleID)), output_type = 'xlsx', file_name = paste0(markers[1],"_queries.xlsx"))
+
