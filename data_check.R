@@ -483,25 +483,29 @@ create_output_table(compare_df(arrange(mat1 %>% filter(SampleID %in% inter_sampl
 
 ####single HBC
 
-ins = read_csv(dir()[2])
-
-
-markers=c("aHBc_IUO")
-
-mat1 = ins %>% filter(TestName %in% markers) %>% 
-            filter(SampleID %in% c(238001:238250))  %>% 
-            select(SampleID,DoseResult)
-
-# write_excel_csv(ins %>% filter(TestName %in% markers) %>% select(SampleID,TestName,DoseResult),  paste0(markers[1],"_wrongnumbers.csv"))
-
-
 mat2 = read_excel(dir()[1], col_types ="text") %>% 
           rename(SampleID="唯一可溯源编号") %>% 
           rename(DoseResult="DXI9000检测结果") %>%
           select(SampleID,DoseResult) %>%
           mutate_at(c('SampleID'), as.character)
 
-inter_samples=intersect(mat1$SampleID,mat2$SampleID)
+ins = read_csv(dir()[2])
 
-create_output_table(compare_df(arrange(mat1 %>% filter(SampleID %in% inter_samples) , SampleID),arrange(mat2 %>% filter(SampleID %in% inter_samples) , SampleID)), output_type = 'xlsx', file_name = paste0(markers[1],"_queries.xlsx"))
+markers=c("aHBc_IUO")
+
+mat1 = ins %>% filter(TestName %in% markers) %>% 
+            filter(SampleID %in% mat2$SampleID)  %>% 
+            select(SampleID,DoseResult)
+
+inter_samples=intersect(mat1$SampleID,mat2$SampleID)
+reform_mat2 =rbind(mat2 %>% distinct(), mat2[duplicated(mat2$SampleID),])
+
+compare_df(arrange(mat1 %>% filter(SampleID %in% inter_samples) , SampleID), reform_mat2 ) %>%  create_output_table(output_type = 'xlsx', file_name = paste0(markers[1],"_queries.xlsx"))
+
+mylist <- list(
+  yaml(title = paste0(markers[1]," Query"), author = "Larry Liu"),
+  "# Query report",
+  "Query details please refer to:",
+summary(comparedf(arrange(mat1 %>% filter(SampleID %in% inter_samples) , SampleID), reform_mat2))
+) %>%   write2pdf(paste0(markers[1],"_query_details.pdf"), quiet = TRUE)
 

@@ -48,4 +48,13 @@ inter_samples=intersect(mat1$Sample_ID,mat2$Sample_ID)
 
 reform_mat2 =rbind(mat2 %>% distinct(), mat2[duplicated(mat2$Sample_ID),])
 
-create_output_table(compare_df(arrange(mat1 %>% filter(Sample_ID %in% inter_samples) , Sample_ID), reform_mat2 ), output_type = 'xlsx', file_name = paste0(ins_markers[1],"_queries.xlsx"))
+compare_df(arrange(mat1 %>% filter(Sample_ID %in% inter_samples) , Sample_ID), reform_mat2 ) %>%  create_output_table(output_type = 'xlsx', file_name = paste0(ins_markers[1],"_queries.xlsx"))
+
+mylist <- list(
+  yaml(title = paste0(markers[1]," Query"), author = "Larry Liu"),
+  "# Query report",
+  "Query details please refer to:",
+summary(comparedf(arrange(mat1 %>% filter(Sample_ID %in% inter_samples) , Sample_ID), reform_mat2))
+) %>%   write2pdf(paste0(markers[1],"_query_details.pdf"), quiet = TRUE)
+
+
