@@ -57,4 +57,6 @@ mylist <- list(
 summary(comparedf(arrange(mat1 %>% filter(Sample_ID %in% inter_samples) , Sample_ID), reform_mat2))
 ) %>%   write2pdf(paste0(markers[1],"_query_details.pdf"), quiet = TRUE)
 
+#######
+
 
