@@ -19,7 +19,9 @@ ins_r = read_csv(ins_raw) %>%
 
 ins_c= read_excel(ins_crc, col_types ="text") %>% 
        rename_at(2,~"DoseResult") %>% 
-       rename_at(1,~"SampleID")
+       mutate_at(2 , ~ifelse(is.na(as.numeric(.)), ., round(as.numeric(.), 3))) %>% suppressWarnings() %>%
+       rename_at(1,~"SampleID") %>% 
+       select(SampleID,DoseResult)
 
 print(setdiff(ins_c$SampleID,ins_r$SampleID))
 
@@ -37,7 +39,10 @@ pre_r = read_csv(pre_raw) %>%
 
 pre_c= read_excel(pre_crc, col_types ="text") %>% 
        rename_at(2,~"Result") %>% 
-       rename_at(1,~"Sample ID")
+       mutate_at(2 , ~ifelse(is.na(as.numeric(.)), ., round(as.numeric(.), 3))) %>% suppressWarnings() %>%
+       rename_at(1,~"Sample ID")%>% 
+       select(`Sample ID`,Result)
+       
 
 inter_samples=intersect(pre_r$`Sample ID`,pre_c$`Sample ID`)
 compare_df(arrange(pre_r %>% filter(`Sample ID` %in% inter_samples) , `Sample ID`), arrange(pre_c, `Sample ID`)) %>%  create_output_table(output_type = 'xlsx', file_name = paste0(pre_markers[1],"_C_queries.xlsx"))
@@ -81,11 +86,15 @@ pre_l %>% left_join(pre_r,by="Pre_ID") %>% select(Sample_ID,Result) %>% arrange(
 
 combine <- function(ss_input,t_input,c_input,out_file){
 
-t_mat=read_excel(t_input,sheet = 1) %>% rename_at(1,~"OID") %>% mutate(OID = gsub("R[1-9]","",OID))
+t_mat=read_excel(t_input,col_types ="text") %>% rename_at(1,~"OID") %>% mutate(OID = gsub("R[1-9]","",OID)) %>% 
+      mutate_at(2 , ~ifelse(is.na(as.numeric(.)), ., round(as.numeric(.), 3))) %>% suppressWarnings() %>%
+      select(1,2)
 
-c_mat=read_excel(c_input,sheet = 1)  %>% rename_at(1,~"OID") %>% mutate(OID = gsub("R[1-9]","",OID))
+c_mat=read_excel(c_input,col_types ="text")  %>% rename_at(1,~"OID") %>% mutate(OID = gsub("R[1-9]","",OID))%>% 
+      mutate_at(2 , ~ifelse(is.na(as.numeric(.)), ., round(as.numeric(.), 3))) %>% suppressWarnings() %>%
+      select(1,2)
 
-ss_mat=read_excel(ss_input,sheet = 1) %>% rename_at(2,~"OID") 
+ss_mat=read_excel(ss_input,col_types ="text") %>% rename_at(2,~"OID") 
 
 print(dim(t_mat))
 print(dim(c_mat))
@@ -93,8 +102,10 @@ print(dim(ss_mat))
 
 
 res2 = left_join(ss_mat,t_mat,by="OID")
-res3 = left_join(res2,c_mat,by="OID") %>% rename( 唯一可溯源编号 = "OID")  %>% relocate("备注", .after = last_col())
-
+res3 = left_join(res2,c_mat,by="OID") %>% rename( 唯一可溯源编号 = "OID") %>% 
+             mutate(备注 = case_when(grepl("^>",.[[ncol(res2)]]) ~ "超出线性范围")) %>% 
+             mutate(备注 = case_when(grepl("^>",.[[ncol(res2)+1]]) ~ "超出线性范围")) %>% 
+             relocate("备注", .after = last_col())
 
 wb <- createWorkbook()
 addWorksheet(wb,sheetName = 'Database')
@@ -107,13 +118,15 @@ saveWorkbook(wb,file = paste(out_file,"Database" ,gsub(":", "_", Sys.time( )) ,"
 
 combineBT <- function(ss_input,t_input,c_input,b_table,out_file){
 
-t_mat=read_excel(t_input,, col_types ="text") %>% rename_at(1,~"TID") %>% mutate(TID = gsub("R[1-9]","",TID))
+t_mat=read_excel(t_input,col_types ="text") %>% rename_at(1,~"TID") %>% mutate(TID = gsub("R[1-9]","",TID)) %>% 
+      mutate_at(2 , ~ifelse(is.na(as.numeric(.)), ., round(as.numeric(.), 3))) %>% suppressWarnings()
 
-c_mat=read_excel(c_input,, col_types ="text")  %>% rename_at(1,~"CID") %>% mutate(CID = gsub("R[1-9]","",CID))
+c_mat=read_excel(c_input,col_types ="text")  %>% rename_at(1,~"CID") %>% mutate(CID = gsub("R[1-9]","",CID)) %>% 
+      mutate_at(2 , ~ifelse(is.na(as.numeric(.)), ., round(as.numeric(.), 3))) %>% suppressWarnings()
 
 ss_mat=read_excel(ss_input, col_types ="text") %>% rename_at(2,~"OID") 
 
-bt_mat=read_excel(b_table,, col_types ="text") %>% rename_at(1,~"OID") %>% rename_at(2,~"TID") %>% rename_at(3,~"CID")
+bt_mat=read_excel(b_table,col_types ="text") %>% rename_at(1,~"OID") %>% rename_at(2,~"TID") %>% rename_at(3,~"CID")
 
 print(dim(t_mat))
 print(dim(c_mat))
