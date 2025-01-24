@@ -84,7 +84,7 @@ pre_l %>% left_join(pre_r,by="Pre_ID") %>% select(Sample_ID,Result) %>% arrange(
 }
 
 
-combine <- function(ss_input,t_input,c_input,out_file){
+combine <- function(ss_input,t_input,c_input,out_file,down_l,up_l){
 
 t_mat=read_excel(t_input,col_types ="text") %>% rename_at(1,~"OID") %>% mutate(OID = gsub("R[1-9]","",OID)) %>% 
       mutate_at(2 , ~ifelse(is.na(as.numeric(.)), ., round(as.numeric(.), 3))) %>% suppressWarnings() %>%
@@ -103,8 +103,10 @@ print(dim(ss_mat))
 
 res2 = left_join(ss_mat,t_mat,by="OID")
 res3 = left_join(res2,c_mat,by="OID") %>% rename( 唯一可溯源编号 = "OID") %>% 
-             mutate(备注 = case_when(grepl("^>",.[[ncol(res2)]]) ~ "超出线性范围")) %>% 
-             mutate(备注 = case_when(grepl("^>",.[[ncol(res2)+1]]) ~ "超出线性范围")) %>% 
+             mutate(备注 = case_when(! .[[ncol(res2)]] %>% as.numeric() %>% between(down_l,up_l) ~ "超出线性范围")) %>% 
+              mutate(备注 = case_when(! .[[ncol(res2)+1]] %>% as.numeric() %>% between(down_l,up_l) ~ "超出线性范围")) %>%
+              mutate(备注 = case_when(grepl("^>",.[[ncol(res2)]]) ~ "超出线性范围")) %>% 
+              mutate(备注 = case_when(grepl("^>",.[[ncol(res2)+1]]) ~ "超出线性范围")) %>%
              relocate("备注", .after = last_col())
 
 wb <- createWorkbook()
@@ -116,7 +118,7 @@ saveWorkbook(wb,file = paste(out_file,"Database" ,gsub(":", "_", Sys.time( )) ,"
 
 
 
-combineBT <- function(ss_input,t_input,c_input,b_table,out_file){
+combineBT <- function(ss_input,t_input,c_input,b_table,out_file,down_l,up_l){
 
 t_mat=read_excel(t_input,col_types ="text") %>% rename_at(1,~"TID") %>% mutate(TID = gsub("R[1-9]","",TID)) %>% 
       mutate_at(2 , ~ifelse(is.na(as.numeric(.)), ., round(as.numeric(.), 3))) %>% suppressWarnings()
@@ -133,8 +135,14 @@ print(dim(c_mat))
 print(dim(ss_mat))
 
 
-res3 = ss_mat %>% left_join(bt_mat,by="OID") %>% left_join(t_mat,by="TID") %>% left_join(c_mat,by="CID") %>% 
-       select(-c("TID","CID")) %>% rename( 唯一可溯源编号 = "OID")  %>% relocate("备注", .after = last_col())
+res2 = ss_mat %>% left_join(bt_mat,by="OID") %>% left_join(t_mat,by="TID") 
+                 
+res3 = res2 %>% left_join(c_mat,by="CID") %>% 
+                  mutate(备注 = case_when(! .[[ncol(res2)]] %>% as.numeric() %>% between(down_l,up_l) ~ "超出线性范围")) %>% 
+                  mutate(备注 = case_when(! .[[ncol(res2)+1]] %>% as.numeric() %>% between(down_l,up_l) ~ "超出线性范围")) %>%
+                  mutate(备注 = case_when(grepl("^>",.[[ncol(res2)]]) ~ "超出线性范围")) %>% 
+                  mutate(备注 = case_when(grepl("^>",.[[ncol(res2)+1]]) ~ "超出线性范围")) %>%
+                  select(-c("TID","CID")) %>% rename( 唯一可溯源编号 = "OID")  %>% relocate("备注", .after = last_col())
 
 
 wb <- createWorkbook()
@@ -144,8 +152,17 @@ saveWorkbook(wb,file = paste(out_file,"Database" ,gsub(":", "_", Sys.time( )) ,"
 
 }
 
+#####merge multiple
 
+library(dplyr)
+library(readr)
+df <- list.files(path="yourpath", full.names = TRUE) %>% 
+  lapply(read_csv) %>% 
+  bind_rows
 
+dim(df)
+
+write_csv(df, "CHN-233_CK MB RI_9000 Results.csv")
 
 ####CK-MB
 
