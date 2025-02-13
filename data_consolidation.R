@@ -84,7 +84,7 @@ pre_l %>% left_join(pre_r,by="Pre_ID") %>% select(Sample_ID,Result) %>% arrange(
 }
 
 
-combine <- function(ss_input,t_input,c_input,out_file,down_l,up_l){
+combine <- function(ss_input,t_input,c_input,out_file,down_l=0,up_l=1000000){
 
 t_mat=read_excel(t_input,col_types ="text") %>% rename_at(1,~"OID") %>% mutate(OID = gsub("R[1-9]","",OID)) %>% 
       mutate_at(2 , ~ifelse(is.na(as.numeric(.)), ., round(as.numeric(.), 3))) %>% suppressWarnings() %>%
@@ -103,11 +103,14 @@ print(dim(ss_mat))
 
 res2 = left_join(ss_mat,t_mat,by="OID")
 res3 = left_join(res2,c_mat,by="OID") %>% rename( 唯一可溯源编号 = "OID") %>% 
-             mutate(备注 = case_when(! .[[ncol(res2)]] %>% as.numeric() %>% between(down_l,up_l) ~ "超出线性范围")) %>% 
-              mutate(备注 = case_when(! .[[ncol(res2)+1]] %>% as.numeric() %>% between(down_l,up_l) ~ "超出线性范围")) %>%
-              mutate(备注 = case_when(grepl("^>",.[[ncol(res2)]]) ~ "超出线性范围")) %>% 
-              mutate(备注 = case_when(grepl("^>",.[[ncol(res2)+1]]) ~ "超出线性范围")) %>%
-             relocate("备注", .after = last_col())
+            mutate(备注 = case_when(
+                  ! is.na(备注) ~ 备注,
+                  ! .[[ncol(res2)]] %>% as.numeric() %>% between(down_l,up_l) ~ "超出线性范围",
+                  ! .[[ncol(res2)+1]] %>% as.numeric() %>% between(down_l,up_l) ~ "超出线性范围",
+                  grepl("^>",.[[ncol(res2)]]) ~ "超出线性范围",
+                  grepl("^>",.[[ncol(res2)+1]]) ~ "超出线性范围"
+                  )) %>% 
+            relocate("备注", .after = last_col())
 
 wb <- createWorkbook()
 addWorksheet(wb,sheetName = 'Database')
@@ -157,7 +160,8 @@ saveWorkbook(wb,file = paste(out_file,"Database" ,gsub(":", "_", Sys.time( )) ,"
 library(dplyr)
 library(readr)
 df <- list.files(path="yourpath", full.names = TRUE) %>% 
-  lapply(read_csv) %>% 
+  lapply(read_csv(col_types = cols(TestStartDT = col_character(), 
+        TestCompleteDT = col_character()))) %>% 
   bind_rows
 
 dim(df)
