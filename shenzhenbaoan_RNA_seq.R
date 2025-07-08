@@ -5,13 +5,6 @@ library(Azimuth)
 set.seed(0)
 rm(list = ls())
 gc()
-####SCT_intergration
-SCT_intergration <- function(assay_list,n_dim=20) {  
-features <- SelectIntegrationFeatures(object.list = assay_list, nfeatures = 3000)
-datasets <- PrepSCTIntegration(object.list = assay_list, anchor.features = features, verbose = TRUE)
-anchors <- FindIntegrationAnchors(object.list = datasets, normalization.method = "SCT",anchor.features = features, verbose = TRUE, reference=1,reduction = "cca")
-IntegrateData(anchorset = anchors, normalization.method = "SCT", verbose = TRUE, k.weight = 46)
-}
 
 ##Read in
 folders=list.files('./')
@@ -54,7 +47,7 @@ objs <- FindNeighbors(objs, reduction = "harmony", dims = 1:30)
 objs <- FindClusters(objs, resolution = 2, cluster.name = "harmony_clusters")
 objs <- RunUMAP(objs, reduction = "harmony", dims = 1:30, reduction.name = "umap.harmony")
 
-
+###cell type annotation
 objs <- RunAzimuth(objs, reference = "pbmcref")
 
 ###figure
