@@ -67,6 +67,17 @@ separate(RDFilename, into = c('Time','标本编号'), sep = '_')
 
 ins %>% select(matches("Ly"))  %>% mutate_if(is.character, as.numeric) %>% skimr::skim()
 
+####duplicated samples
+instrument_dup = ins %>% 
+  select(RDFilename,matches("MDW")) %>%
+  filter(Diff_MDW_Value!="NULL") %>%
+  separate(RDFilename, into = c('Time','标本编号'), sep = '_') %>%
+  group_by(标本编号) %>%
+  filter(n() > 1) |>
+  ungroup()
+write.xlsx(arrange(instrument_dup, 标本编号),  "CHN-097_duplicated.xlsx",  colNames = TRUE)
+
+
 ###clinical label
 
 label <- read_excel("Sepsis_Label_20240705.xlsx", skip = 1)
