@@ -12,24 +12,24 @@ trans_name <- function(x){
 
 Site1 <- read_excel("Site 1-A.xlsx") %>%
     # rename(贝克曼上机数据="贝克曼上机结果") %>% 
-    mutate_at(c("贝克曼上机数据","心超LVEF") , ~ifelse(is.na(as.numeric(.)), ., round(as.numeric(.), 1))) %>% suppressWarnings() %>%
+    mutate_at(c("贝克曼上机数据","心超LVEF","体重","eGFR","左室缩短分数","左室舒张末期内径","左室收缩期末期内径")  , ~ifelse(is.na(as.numeric(.)), ., round(as.numeric(.), 1))) %>% suppressWarnings() %>%
     # rename(诊断结果="第三方专家确诊诊断") %>% 
-    mutate_at("诊断结果",trans_name)%>% 
+    # mutate_at("诊断结果",trans_name)%>% 
     select(!matches("时间"))
 
 
 Site2 <- read_excel("Site 2-B.xls") %>%
     rename(贝克曼上机数据="贝克曼上机结果") %>% 
-    mutate_at(c("贝克曼上机数据","心超LVEF") , ~ifelse(is.na(as.numeric(.)), ., round(as.numeric(.), 1))) %>% suppressWarnings() %>%
-    mutate_at("诊断结果",trans_name)%>% 
+    mutate_at(c("贝克曼上机数据","心超LVEF","体重","eGFR","左室缩短分数","左室舒张末期内径","左室收缩期末期内径")   , ~ifelse(is.na(as.numeric(.)), ., round(as.numeric(.), 1))) %>% suppressWarnings() %>%
+    # mutate_at("诊断结果",trans_name)%>% 
     select(!matches("时间"))
 
 
 
 Site3 <- read_excel("Site3-C.xlsx") %>%
     rename(贝克曼上机数据="贝克曼上机结果") %>% 
-    mutate_at(c("贝克曼上机数据","心超LVEF") , ~ifelse(is.na(as.numeric(.)), ., round(as.numeric(.), 1))) %>% suppressWarnings() %>%
-    mutate_at("诊断结果",trans_name)%>% 
+    mutate_at(c("贝克曼上机数据","心超LVEF","体重","eGFR","左室缩短分数","左室舒张末期内径","左室收缩期末期内径")   , ~ifelse(is.na(as.numeric(.)), ., round(as.numeric(.), 1))) %>% suppressWarnings() %>%
+    # mutate_at("诊断结果",trans_name)%>% 
     select(!matches("时间"))
 
 
@@ -38,7 +38,8 @@ allsite = rbind_common(rbind_common(Site1, Site2),Site3)
 
 
 database <- read_excel("SierraNT-proBNP_database.xlsx")%>% 
-    mutate_at("贝克曼上机数据" , ~ifelse(is.na(as.numeric(.)), ., round(as.numeric(.), 1))) %>% suppressWarnings() 
+    select(!matches("入组")) %>% 
+    mutate_at(c("贝克曼上机数据","心超LVEF","体重","eGFR","左室缩短分数","左室舒张末期内径","左室收缩期末期内径") , ~ifelse(is.na(as.numeric(.)), ., round(as.numeric(.), 1))) %>% suppressWarnings() 
 
 target_columns = intersect(database  %>% colnames(), allsite %>% colnames() )
 
