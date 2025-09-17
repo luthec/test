@@ -111,6 +111,126 @@ res_dat = res_t %>% drop_na(Subject) %>%
       filter(!(freq!=1 & CBCADAT!=Time)) %>%
       mutate(Label = ifelse(Enrollment_ENROLLYN_STD=="N" & is.na(Label), "未入组", Label))
 
+
+
+Sepsis2_type=c("脓毒性休克（严重脓毒症+低血压）","严重脓毒症（器官功能障碍或组织灌注不足）","脓毒症（全身炎症反应综合征+感染）")
+
+Sepsis3_type=c("脓毒性休克（脓毒症+低血压）","脓毒症（SOFA 增加>=2）")
+###database
+res_database = res_dat  %>% 
+     filter(is.na(Label)) %>%
+     rename(体重="Demographic Information of Patients_WEIGHT")%>%
+     rename(性别="Demographic Information of Patients_SEX_STD")%>%
+     rename(年龄="Demographic Information of Patients_AGE")%>%
+     #MDW
+     rename(MDW="Diff_MDW_Value")%>%
+     mutate_at(c('MDW'), as.numeric) %>%
+     #脓毒症
+     rename(SEP_Adjudicator1_Sepsis2="CEC Adjudicator 1_SFDIAGA")%>%
+     rename(SEP_Adjudicator1_Sepsis3="CEC Adjudicator 1_FSDIAGARB")%>%
+     rename(SEP_Adjudicator2_Sepsis2="CEC Adjudicator 2_SFDIAGA")%>%
+     rename(SEP_Adjudicator2_Sepsis3="CEC Adjudicator 2_FSDIAGARB")%>%
+     rename(SEP_Arbitrator_Sepsis2="CEC Arbitrator_SFDIAGA")%>%
+     rename(SEP_Arbitrator_Sepsis3="CEC Arbitrator_FSDIAGARB")%>%
+     drop_na(SEP_Adjudicator1_Sepsis2) %>% drop_na(SEP_Adjudicator2_Sepsis2) %>%
+     mutate(Sepsis2=ifelse(SEP_Adjudicator1_Sepsis2 == SEP_Adjudicator2_Sepsis2, SEP_Adjudicator1_Sepsis2, SEP_Arbitrator_Sepsis2))%>% 
+     drop_na(Sepsis2) %>% 
+     mutate(Sepsis2标准 = ifelse(Sepsis2 %in% Sepsis2_type, "Y" , "N")) %>% 
+
+     mutate(Sepsis3=ifelse(SEP_Adjudicator1_Sepsis3 == SEP_Adjudicator2_Sepsis3, SEP_Adjudicator1_Sepsis3, SEP_Arbitrator_Sepsis3))%>% 
+     drop_na(Sepsis3) %>% 
+     mutate(Sepsis3标准 = ifelse(Sepsis3 %in% Sepsis3_type, "Y" , "N")) %>%
+     #评分
+     rename(SEP_就诊SIRS评分="SIRS Score_SIRSSCOR")%>%
+     rename(SEP_十二小时SIRS评分="SIRS Score_SIRSSCOR1")%>%
+     rename(SEP_就诊qSOFA评分="qSOFA Score_QSOFASCOR")%>%
+     rename(SEP_十二小时qSOFA评分="qSOFA Score_QSOFASCOR1")%>%
+     rename(SEP_SOFA评分="SOFA Score_SOFA_SCORE")%>%
+     #EDC血常规
+     rename(LB01_白细胞="实验室值：（在ED就诊后12小时内）_LB01_白细胞（×10^9/L)")%>%                                       
+     rename(LB01_血红蛋白="实验室值：（在ED就诊后12小时内）_LB01_血红蛋白（g/L）")%>%                                                
+     rename(LB01_血小板="实验室值：（在ED就诊后12小时内）_LB01_血小板（× 10^9/L）")%>%                                             
+     rename(LB01_中性粒细胞= "实验室值：（在ED就诊后12小时内）_LB01_中性粒细胞 %")%>%                                                 
+     rename(LB01_淋巴细胞="实验室值：（在ED就诊后12小时内）_LB01_淋巴细胞 %")%>%                                                   
+     rename(LB01_单核细胞="实验室值：（在ED就诊后12小时内）_LB01_单核细胞 %")%>%                                                    
+     rename(LB01_嗜酸性粒细胞="实验室值：（在ED就诊后12小时内）_LB01_嗜酸性粒细胞 %")%>%                                                 
+     rename(LB01_中性粒细胞绝对计数="实验室值：（在ED就诊后12小时内）_LB01_中性粒细胞绝对计数 (× 10^9/L)")%>%                                  
+     rename(LB01_葡萄糖= "实验室值：（在ED就诊后12小时内）_LB01_葡萄糖 （mmol/L）")%>%                                              
+     rename(LB01_尿素氮="实验室值：（在ED就诊后12小时内）_LB01_尿素氮 （mmol/L）")%>%                                              
+     rename(LB01_肌酸酐="实验室值：（在ED就诊后12小时内）_LB01_肌酸酐 （umol/L）")%>%                                              
+     rename(LB01_总胆红素="实验室值：（在ED就诊后12小时内）_LB01_总胆红素（umol/L）")%>%                                             
+     rename(LB01_乳酸盐="实验室值：（在ED就诊后12小时内）_LB01_乳酸盐 (mmol/L)")%>%                                                
+     rename(LB01_红细胞沉降率= "实验室值：（在ED就诊后12小时内）_LB01_红细胞沉降率 (mm/h) (如适用)")%>%                                   
+     rename(LB01_谷草转氨酶= "实验室值：（在ED就诊后12小时内）_LB01_谷草转氨酶 (IU/L) (如适用)")%>%                                     
+     rename(LB01_谷丙转氨酶= "实验室值：（在ED就诊后12小时内）_LB01_谷丙转氨酶 (IU/L) (如适用)")%>%                                     
+     rename(LB01_肌钙蛋白= "实验室值：（在ED就诊后12小时内）_LB01_肌钙蛋白(ug/L)（如适用）")%>%                                       
+     #EDC细菌指标
+     rename(LB01_IL6="实验室值：（在ED就诊后12小时内）_LB01_白细胞介素6 (pg/mL) (如适用)")%>%
+     rename(LB01_PCT="实验室值：（在ED就诊后12小时内）_LB01_降钙素原 （ng/mL）")%>%
+     rename(LB01_CRP="实验室值：（在ED就诊后12小时内）_LB01_C反应蛋白 （mg/L）")%>%
+     rename(LB01_INR="实验室值：（在ED就诊后12小时内）_LB01_国际标准化比值 (INR)") %>%
+     # mutate(across(c("PCT","CRP","IL6","INR"), readr::parse_number))%>%
+     mutate(across(matches("LB01"), readr::parse_number))%>%
+     #EDC information
+     #既有状况_感染影响
+     rename(CF_抗生素治疗="Pre-existing Conditions_ED08_STD") %>%
+     rename(CF_抗生素="Pre-existing Conditions_ED08OTH") %>%
+     rename(CF_抗生素初级预防治疗="Pre-existing Conditions_ED09_STD") %>%
+     rename(CF_预防抗生素="Pre-existing Conditions_ED09OTH") %>%
+     #既有状况_免疫抑制
+     rename(CF_化疗="Pre-existing Conditions_ED04_STD") %>%
+     rename(CF_化疗药物="Pre-existing Conditions_ED04OTH") %>%
+     rename(CF_免疫抑制剂长期治疗="Pre-existing Conditions_ED05_STD") %>%
+     rename(CF_长期免疫抑制剂="Pre-existing Conditions_ED05OTH") %>%
+     rename(CF_器官或骨髓移植而疑似免疫抑制="Pre-existing Conditions_ED03_STD") %>%
+     rename(CF_羟基脲治疗="Pre-existing Conditions_ED06_STD") %>%
+     #既有状况_血细胞异常
+     rename(CF_血细胞异常="Pre-existing Conditions_ED07_STD") %>%
+     rename(CF_血细胞异常的血液病="Pre-existing Conditions_ED07OTH") %>%
+     rename(CF_中性粒细胞减少症="Pre-existing Conditions_ED01_STD") %>%
+     rename(CF_接受中性粒细胞减少症治疗="Pre-existing Conditions_ED02_STD") %>%                 
+     #既往病史
+     rename(MH_胃肠道="Past Medical History_GASTRYN_STD") %>%
+     rename(MH_血液肿瘤学="Past Medical History_HEMATYN_STD") %>%
+     rename(MH_自身免疫="Past Medical History_AUTOIMYN_STD") %>%
+     rename(MH_心血管="Past Medical History_CARDIYN_STD") %>%
+     rename(MH_泌尿生殖="Past Medical History_GENITYN_STD") %>%
+     rename(MH_呼吸="Past Medical History_RESPIYN_STD") %>%
+     rename(MH_新陈代谢="Past Medical History_METAYN_STD") %>%
+     rename(MH_神经系统="Past Medical History_CNSYN_STD") %>%
+     rename(MH_肾病="Past Medical History_RENALYN_STD") %>%
+     rename(MH_肝病="Past Medical History_HEPATIYN_STD") %>%
+     rename(MH_其他疾病="Past Medical History_ORTOHSPC") %>%
+     rename(MH_既有状况="Presenting Symptoms/Complaints (including symptom duration and intervention)_SYMOTH") %>%
+     #感染处理
+     rename(IW1_感染处理="Infection Workup_IW_YN_STD") %>%
+     rename(IW1_细菌检测="Bacterial Testing Log_SEROYN_STD") %>%
+     rename(IW1_病毒感染="Other Culture and Rapid Test_VIRALRES_STD") %>%
+     rename(IW1_真菌检测="Other Culture and Rapid Test_FUNGALRE_STD") %>%
+     rename(IW1_其他感染检测="Other Culture and Rapid Test_OTHTPERF") %>%
+     # 抗生素抗病毒药物
+     rename(AT1_十二小时内抗生素治疗="Antibiotics, antiviral and antifungal drugs_ANTIBYN_STD") %>%
+     rename(AT1_十二小时内抗病毒药物="Antibiotics, antiviral and antifungal drugs_ANTIVYN_STD") %>%
+     rename(AT1_十二小时内抗真菌药物="Antibiotics, antiviral and antifungal drugs_ANTIFYN_STD") %>%
+     rename(AT1_十二小时内其他抗感染药物="Antibiotics, antiviral and antifungal drugs_OTHINYN_STD") %>%
+     # 诊断手术
+     rename(SD_手术检查结果="Surgery/Diagnostics_SURGPFIN") %>%
+     rename(SD_胸部x光检查结果="Surgery/Diagnostics_XRAYFIND") %>%
+     rename(SD_计算机断层扫描观察到浸润或固结="Surgery/Diagnostics_TOMO_INF_STD") %>%
+     rename(SD_计算机断层扫描检查结果="Surgery/Diagnostics_TOMOFIND") %>%
+     rename(SD_腹部计算机断层扫描结果="Surgery/Diagnostics_ABCTFIND") %>%
+     rename(SD_腹部超声结果="Surgery/Diagnostics_ABULFIND") %>%
+     rename(SD_其他相关检查结果="Surgery/Diagnostics_OTHEXFIN") %>%
+     select(matches("Site")[1],Subject,体重,性别,年龄,MDW,Sepsis2标准,Sepsis3标准,matches("SEP_"),matches("LB01_"),matches("CF_"),matches("MH_"),matches("IW1_"),matches("AT1_"),matches("SD_"))
+
+
+res_database_clean <- res_database %>% mutate(across(where(is.list), as.character))
+ write.xlsx(arrange(res_database_clean, Subject),  "Sepsis_PI.xlsx",  colNames = TRUE)
+
+
+
+
+
 ####for Bruce
 res_b = res_dat %>% 
       select(matches("Site")[1],Subject,"Demographic Information of Patients_SEX_STD","Demographic Information of Patients_AGE","Enrollment_ENROLLYN_STD",Label,Diff_MDW_Value,"CEC Adjudicator 1_SFDIAGA","CEC Adjudicator 1_FSDIAGARB","CEC Adjudicator 2_SFDIAGA","CEC Adjudicator 2_FSDIAGARB","CEC Arbitrator_SFDIAGA","CEC Arbitrator_FSDIAGARB",
