@@ -1,3 +1,5 @@
+install.packages(c("arsenal","compareDF","dplyr","xlsx","readxl","readr","openxlsx"))
+
 library(arsenal)
 library(compareDF)
 library(dplyr)
