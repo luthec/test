@@ -64,7 +64,12 @@ ins_r = read_csv(ins_raw, col_types = cols(SampleID = col_character())) %>%
 
 print(setdiff(ins_l$Ins_ID,ins_r$Ins_ID))
 
-ins_l %>% left_join(ins_r,by="Ins_ID") %>% select(Sample_ID,DoseResult) %>% write.xlsx(paste0(ins_markers,"_T.xlsx"))
+ins_l %>% left_join(ins_r,by="Ins_ID") %>% select(Sample_ID,DoseResult) %>% arrange(Sample_ID) %>% 
+  distinct() %>% 
+  group_by(Sample_ID) %>%
+  filter(!(n() > 1 & DoseResult=="No result")) %>%
+  ungroup() %>%
+  write.xlsx(paste0(ins_markers,"_T.xlsx"))
 }
 
 pre_label <- function(pre_markers,pre_raw,pre_label){
@@ -81,7 +86,12 @@ pre_r = read_csv(pre_raw, col_types = cols(`Sample ID` = col_character())) %>%
 
 print(setdiff(pre_l$Pre_ID,pre_r$Pre_ID))
 
-pre_l %>% left_join(pre_r,by="Pre_ID") %>% select(Sample_ID,Result) %>% arrange(Sample_ID) %>% write.xlsx(paste0(pre_markers,"_C.xlsx"))
+pre_l %>% left_join(pre_r,by="Pre_ID") %>% select(Sample_ID,Result) %>% arrange(Sample_ID) %>% 
+  distinct() %>% 
+  group_by(Sample_ID) %>%
+  filter(!(n() > 1 & Result=="No result")) %>%
+  ungroup() %>%
+  write.xlsx(paste0(pre_markers,"_C.xlsx"))
 
 }
 
